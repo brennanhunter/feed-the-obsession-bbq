@@ -127,10 +127,10 @@ export default function MenuWrapper() {
               <div className="mb-8">
                 <p className="text-2xl font-bold mb-4">Call for Pricing & Availability</p>
                 <a 
-                  href="tel:555-BBQ-FOOD" 
+                  href="tel:812-205-0559" 
                   className="text-4xl md:text-5xl font-display text-red-600 hover:text-red-500 transition-all tracking-wider"
                 >
-                  (555) BBQ-FOOD
+                  812-205-0559
                 </a>
               </div>
               <div className="grid md:grid-cols-3 gap-6 mt-10 text-left">
