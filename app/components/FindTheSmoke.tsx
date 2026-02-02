@@ -30,7 +30,7 @@ export default function FindTheSmoke() {
             <div className="flex items-center gap-3 text-xl">
               <FaFacebookF className="text-red-600 text-2xl" />
               <a 
-                href="https://www.facebook.com/groups/175959977015949" 
+                href="https://www.facebook.com/profile.php?id=61573454007742" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="hover:text-red-600 transition-all underline"

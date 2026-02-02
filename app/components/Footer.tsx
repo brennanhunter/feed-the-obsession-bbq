@@ -34,7 +34,7 @@ export default function Footer() {
             </p>
             <div className="flex items-center justify-center mt-5 gap-x-3">
               <a
-                href="https://www.facebook.com/groups/175959977015949"
+                href="https://www.facebook.com/profile.php?id=61573454007742"
                 className="w-10 h-10 grid place-content-center bg-white text-[#222831] rounded-full hover:text-white hover:bg-red-600 transition-all transform hover:scale-110"
                 target="_blank"
                 rel="noreferrer"
@@ -62,8 +62,8 @@ export default function Footer() {
                 Check Facebook daily for our current location and hours
               </p>
               <a 
-                href="https://www.facebook.com/groups/175959977015949" 
-                target="_blank" 
+                href="https://www.facebook.com/profile.php?id=61573454007742"
+                target="_blank"
                 rel="noopener noreferrer"
                 className="text-red-600 hover:text-red-500 transition-all text-xl font-bold mt-2"
               >

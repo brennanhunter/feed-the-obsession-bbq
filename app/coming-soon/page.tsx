@@ -25,7 +25,7 @@ export default function ComingSoon() {
             <div className="flex items-center gap-3 text-lg">
               <FaFacebookF className="text-red-600 text-xl" />
               <a 
-                href="https://www.facebook.com/groups/175959977015949" 
+                href="https://www.facebook.com/profile.php?id=61573454007742" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="hover:text-red-600 transition-all underline text-white"
