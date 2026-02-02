@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 
 const categories = ["BBQ Plates", "Sides", "Catering"];
 
@@ -27,7 +27,7 @@ const menuItems = [
     title: "Pulled Pork Plate",
     description: "Tender pulled pork with two sides",
     price: 15,
-    image: "/pictures/food/ribs.png",
+    image: "/pictures/food/pulled-pork-transparent.png",
     category: "BBQ Plates"
   },
   {
@@ -35,7 +35,7 @@ const menuItems = [
     title: "Smoked German Potatoes",
     description: "Creamy potatoes with a smoky finish",
     price: 5,
-    image: "/pictures/food/ribs.png",
+    image: "/pictures/food/german-potatoes-transparent.png",
     category: "Sides"
   },
   {
@@ -78,17 +78,76 @@ const menuItems = [
     image: "/pictures/food/ribs.png",
     category: "Sides"
   },
+  {
+    id: 10,
+    title: "Cucumber Salad",
+    description: "Fresh cucumber salad with herbs",
+    price: 4,
+    image: "/pictures/food/cucumber-transparent.png",
+    category: "Sides"
+  },
 ];
 
 export default function MenuWrapper() {
   const [active, setActive] = useState(0);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [videoOpacity, setVideoOpacity] = useState(1);
+
+  useEffect(() => {
+    const handleShowCatering = () => {
+      console.log('Catering event received!'); // Debug log
+      setActive(2); // Switch to Catering tab
+    };
+    
+    window.addEventListener('showCatering', handleShowCatering);
+    
+    return () => {
+      window.removeEventListener('showCatering', handleShowCatering);
+    };
+  }, []);
+
+  useEffect(() => {
+    // When Catering tab is active, play video with sound
+    if (active === 2 && videoRef.current) {
+      setVideoOpacity(1); // Reset opacity
+      videoRef.current.currentTime = 0; // Reset to start
+      videoRef.current.muted = false;
+      videoRef.current.play().catch(err => {
+        console.log('Video autoplay failed:', err);
+        // If autoplay with sound fails, try with mute
+        videoRef.current!.muted = true;
+        videoRef.current!.play();
+      });
+    }
+  }, [active]);
+
+  const handleTimeUpdate = () => {
+    if (videoRef.current) {
+      const video = videoRef.current;
+      const timeRemaining = video.duration - video.currentTime;
+      
+      // Start fading out 2 seconds before the end
+      if (timeRemaining <= 2 && timeRemaining > 0) {
+        setVideoOpacity(timeRemaining / 2);
+      }
+    }
+  };
+
+  const handleVideoEnded = () => {
+    setVideoOpacity(0);
+    // Scroll to top of menu section
+    const menuElement = document.getElementById('menu');
+    if (menuElement) {
+      menuElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
 
   const filteredItems = menuItems.filter(
     (item) => item.category === categories[active]
   );
 
   return (
-    <div className="container mx-auto mb-16 py-20">
+    <div id="menu" className="container mx-auto mb-16 py-20">
       <div className="flex flex-col items-center w-full">
         <h2 className="text-[40px] font-display tracking-wider">OUR MENU</h2>
         <p className="mt-4 text-center text-white/60 max-w-xl">
@@ -98,12 +157,19 @@ export default function MenuWrapper() {
           {categories.map((category, index) => (
             <button
               key={category}
+              data-category={category}
               className={`px-6 py-2 rounded-3xl transition-all ${
                 index === active
                   ? "bg-[#222831] text-white"
                   : "bg-transparent border border-white/20 hover:border-red-600"
               }`}
-              onClick={() => setActive(index)}
+              onClick={() => {
+                setActive(index);
+                const menuElement = document.getElementById('menu');
+                if (menuElement) {
+                  menuElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+              }}
             >
               {category}
             </button>
@@ -117,6 +183,26 @@ export default function MenuWrapper() {
           <div className="col-span-full">
             <div className="bg-[#222831] rounded-3xl p-12 text-center border-2 border-white/10">
               <h3 className="text-4xl md:text-5xl font-display tracking-wider mb-6">CATERING AVAILABLE</h3>
+              
+              {/* Video Section */}
+              <div className="mb-8 max-w-md mx-auto">
+                <video
+                  ref={videoRef}
+                  className="w-full h-auto rounded-lg"
+                  style={{ 
+                    opacity: videoOpacity,
+                    transition: 'opacity 0.5s ease-out',
+                    display: videoOpacity === 0 ? 'none' : 'block'
+                  }}
+                  controls
+                  playsInline
+                  onTimeUpdate={handleTimeUpdate}
+                  onEnded={handleVideoEnded}
+                >
+                  <source src="/pictures/smoker-process/advertisement.mp4" type="video/mp4" />
+                </video>
+              </div>
+
               <p className="text-xl mb-8 text-white/80">
                 Parties • Weddings • Corporate Events • Special Occasions
               </p>

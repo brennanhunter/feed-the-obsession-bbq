@@ -21,20 +21,50 @@ export default function Header() {
               <Link href="/">Home</Link>
             </li>
             <li className="px-[5px] py-[10px] uppercase hover:text-red-600 cursor-pointer transition-all">
-              <Link href="#menu">Menu</Link>
+              <a href="#menu" onClick={(e) => {
+                e.preventDefault();
+                const menuElement = document.getElementById('menu');
+                if (menuElement) {
+                  menuElement.scrollIntoView({ behavior: 'smooth' });
+                }
+                setTimeout(() => {
+                  const bbqButton = document.querySelector('[data-category="BBQ Plates"]') as HTMLButtonElement;
+                  if (bbqButton) {
+                    bbqButton.click();
+                  }
+                }, 500);
+              }}>Menu</a>
             </li>
             <li className="px-[5px] py-[10px] uppercase hover:text-red-600 cursor-pointer transition-all">
-              <Link href="#about">About</Link>
+              <a href="#about" onClick={(e) => {
+                e.preventDefault();
+                const aboutElement = document.getElementById('about');
+                if (aboutElement) {
+                  aboutElement.scrollIntoView({ behavior: 'smooth' });
+                }
+              }}>About</a>
             </li>
             <li className="px-[5px] py-[10px] uppercase hover:text-red-600 cursor-pointer transition-all">
-              <Link href="#catering">Catering</Link>
+              <a href="#menu" onClick={(e) => {
+                e.preventDefault();
+                const menuElement = document.getElementById('menu');
+                if (menuElement) {
+                  menuElement.scrollIntoView({ behavior: 'smooth' });
+                }
+                setTimeout(() => {
+                  const cateringButton = document.querySelector('[data-category="Catering"]') as HTMLButtonElement;
+                  if (cateringButton) {
+                    cateringButton.click();
+                  }
+                }, 500);
+              }}>Catering</a>
             </li>
           </ul>
         </nav>
 
         {/* Right Side Icons */}
         <div className="flex gap-x-4 items-center">
-          <Link href="#contact">
+          <Link href="/coming-soon">
             <span className="hover:text-red-600 transition-all cursor-pointer">
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                 <path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" />
@@ -42,7 +72,7 @@ export default function Header() {
             </span>
           </Link>
 
-          <Link href="#order">
+          <Link href="/coming-soon">
             <span className="relative hover:text-red-600 transition-all cursor-pointer">
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                 <path d="M3 1a1 1 0 000 2h1.22l.305 1.222a.997.997 0 00.01.042l1.358 5.43-.893.892C3.74 11.846 4.632 14 6.414 14H15a1 1 0 000-2H6.414l1-1H14a1 1 0 00.894-.553l3-6A1 1 0 0017 3H6.28l-.31-1.243A1 1 0 005 1H3zM16 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM6.5 18a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" />
@@ -53,17 +83,11 @@ export default function Header() {
             </span>
           </Link>
 
-          <button className="hover:text-red-600 transition-all cursor-pointer">
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
-            </svg>
-          </button>
-
-          <a href="#order" className="md:inline-block hidden">
+          <Link href="/coming-soon" className="md:inline-block hidden">
             <button className="text-white px-[30px] py-[8px] rounded-3xl bg-red-600 cursor-pointer hover:opacity-70 transition-all">
               Order Online
             </button>
-          </a>
+          </Link>
 
           <button 
             className="sm:hidden inline-block hover:text-red-600 transition-all"
@@ -89,14 +113,44 @@ export default function Header() {
             <li className="px-[5px] py-[10px] uppercase hover:text-red-600 cursor-pointer" onClick={() => setIsMenuOpen(false)}>
               <Link href="/">Home</Link>
             </li>
-            <li className="px-[5px] py-[10px] uppercase hover:text-red-600 cursor-pointer" onClick={() => setIsMenuOpen(false)}>
-              <Link href="#menu">Menu</Link>
+            <li className="px-[5px] py-[10px] uppercase hover:text-red-600 cursor-pointer" onClick={() => {
+              setIsMenuOpen(false);
+              const menuElement = document.getElementById('menu');
+              if (menuElement) {
+                menuElement.scrollIntoView({ behavior: 'smooth' });
+              }
+              setTimeout(() => {
+                const bbqButton = document.querySelector('[data-category="BBQ Plates"]') as HTMLButtonElement;
+                if (bbqButton) {
+                  bbqButton.click();
+                }
+              }, 500);
+            }}>
+              <a href="#menu">Menu</a>
             </li>
-            <li className="px-[5px] py-[10px] uppercase hover:text-red-600 cursor-pointer" onClick={() => setIsMenuOpen(false)}>
-              <Link href="#about">About</Link>
+            <li className="px-[5px] py-[10px] uppercase hover:text-red-600 cursor-pointer" onClick={() => {
+              setIsMenuOpen(false);
+              const aboutElement = document.getElementById('about');
+              if (aboutElement) {
+                aboutElement.scrollIntoView({ behavior: 'smooth' });
+              }
+            }}>
+              <a href="#about">About</a>
             </li>
-            <li className="px-[5px] py-[10px] uppercase hover:text-red-600 cursor-pointer" onClick={() => setIsMenuOpen(false)}>
-              <Link href="#catering">Catering</Link>
+            <li className="px-[5px] py-[10px] uppercase hover:text-red-600 cursor-pointer" onClick={() => {
+              setIsMenuOpen(false);
+              const menuElement = document.getElementById('menu');
+              if (menuElement) {
+                menuElement.scrollIntoView({ behavior: 'smooth' });
+              }
+              setTimeout(() => {
+                const cateringButton = document.querySelector('[data-category="Catering"]') as HTMLButtonElement;
+                if (cateringButton) {
+                  cateringButton.click();
+                }
+              }, 500);
+            }}>
+              <a href="#menu">Catering</a>
             </li>
           </ul>
         </nav>

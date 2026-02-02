@@ -2,7 +2,7 @@ import { FaFacebookF, FaPhone } from 'react-icons/fa';
 
 export default function FindTheSmoke() {
   return (
-    <div className="bg-black border-y-4 border-red-600 py-16">
+    <div id="about" className="bg-black border-y-4 border-red-600 py-16">
       <div className="container mx-auto px-6">
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-[50px] font-display tracking-wider mb-6">
