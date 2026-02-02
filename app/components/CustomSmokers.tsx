@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Slider from "react-slick";
 import { useRef } from "react";
+import { motion } from "framer-motion";
 
 export default function CustomSmokers() {
   const sliderRef = useRef<any>(null);
@@ -30,7 +31,13 @@ export default function CustomSmokers() {
       <div className="container mx-auto px-6">
         <div className="flex md:flex-row flex-col items-center gap-12">
           {/* Text Content */}
-          <div className="md:w-1/2">
+          <motion.div 
+            initial={{ opacity: 0, x: -50 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ duration: 0.6 }}
+            className="md:w-1/2"
+          >
             <h2 className="text-[40px] font-display tracking-wider mb-6">CUSTOM SMOKERS</h2>
             <p className="text-lg mb-4 text-white/80">
               Want your own custom-built smoker? We design and fabricate professional-grade 
@@ -64,10 +71,16 @@ export default function CustomSmokers() {
             <button className="text-white px-[30px] py-[8px] rounded-3xl bg-red-600 cursor-pointer hover:opacity-70 transition-all">
               Inquire About Custom Smokers
             </button>
-          </div>
+          </motion.div>
 
           {/* Media Carousel */}
-          <div className="md:w-1/2 w-full">
+          <motion.div 
+            initial={{ opacity: 0, x: 50 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="md:w-1/2 w-full"
+          >
             <div className="relative">
               <Slider ref={sliderRef} {...settings}>
                 {/* Measuring */}
@@ -175,7 +188,7 @@ export default function CustomSmokers() {
                 </svg>
               </button>
             </div>
-          </div>
+          </motion.div>
         </div>
       </div>
     </div>

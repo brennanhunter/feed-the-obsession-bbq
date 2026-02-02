@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useState, useEffect, useRef } from "react";
+import { motion } from "framer-motion";
 
 const categories = ["BBQ Plates", "Sides", "Catering"];
 
@@ -237,8 +238,15 @@ export default function MenuWrapper() {
           </div>
         ) : (
           // Menu Items
-          filteredItems.map((item) => (
-            <div key={item.id} className="bg-[#222831] rounded-3xl relative overflow-hidden group">
+          filteredItems.map((item, index) => (
+            <motion.div 
+              key={item.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: index * 0.1 }}
+              whileHover={{ scale: 1.03, y: -5 }}
+              className="bg-[#222831] rounded-3xl relative overflow-hidden group"
+            >
               <div className="w-full bg-white/10 h-[210px] grid place-content-center rounded-bl-[46px] rounded-tl-2xl rounded-tr-2xl">
                 <div className="relative w-36 h-36 hover:scale-110 transition-all">
                   <Image
@@ -261,7 +269,7 @@ export default function MenuWrapper() {
                   </button>
                 </div>
               </div>
-            </div>
+            </motion.div>
           ))
         )}
       </div>

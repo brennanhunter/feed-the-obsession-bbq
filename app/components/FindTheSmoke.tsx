@@ -1,10 +1,19 @@
+"use client";
+
 import { FaFacebookF, FaPhone } from 'react-icons/fa';
+import { motion } from 'framer-motion';
 
 export default function FindTheSmoke() {
   return (
     <div id="about" className="bg-black border-y-4 border-red-600 py-16">
       <div className="container mx-auto px-6">
-        <div className="max-w-4xl mx-auto text-center">
+        <motion.div 
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-100px" }}
+          transition={{ duration: 0.6 }}
+          className="max-w-4xl mx-auto text-center"
+        >
           <h2 className="text-[50px] font-display tracking-wider mb-6">
             🔥 FIND THE SMOKE 🔥
           </h2>
@@ -46,7 +55,7 @@ export default function FindTheSmoke() {
           <p className="text-xl italic text-white/70">
             Part of the adventure is the chase.
           </p>
-        </div>
+        </motion.div>
       </div>
     </div>
   );
