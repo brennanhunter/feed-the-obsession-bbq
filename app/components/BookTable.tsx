@@ -2,6 +2,7 @@
 
 import { useFormik } from "formik";
 import * as Yup from "yup";
+import { motion } from "framer-motion";
 
 const reservationSchema = Yup.object({
   fullName: Yup.string()
@@ -86,8 +87,22 @@ export default function BookTable() {
   return (
     <div className="bg-[#222831] py-20">
       <div className="container mx-auto px-6">
-        <h2 className="text-[40px] font-display tracking-wider mb-10 text-center">BOOK A TABLE</h2>
-        <div className="flex justify-between flex-wrap-reverse gap-10">
+        <motion.h2 
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-100px" }}
+          transition={{ duration: 0.6 }}
+          className="text-[40px] font-display tracking-wider mb-10 text-center"
+        >
+          BOOK A TABLE
+        </motion.h2>
+        <motion.div 
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-100px" }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+          className="flex justify-between flex-wrap-reverse gap-10"
+        >
           <form className="lg:flex-1 w-full" onSubmit={handleSubmit}>
             <div className="flex flex-col gap-y-3">
               {inputs.map((input) => (
@@ -130,7 +145,7 @@ export default function BookTable() {
               className="h-full w-full min-h-[400px] rounded-lg"
             ></iframe>
           </div>
-        </div>
+        </motion.div>
       </div>
     </div>
   );

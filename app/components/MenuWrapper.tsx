@@ -149,7 +149,13 @@ export default function MenuWrapper() {
 
   return (
     <div id="menu" className="container mx-auto mb-16 py-20">
-      <div className="flex flex-col items-center w-full">
+      <motion.div 
+        initial={{ opacity: 0, y: 30 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: "-100px" }}
+        transition={{ duration: 0.6 }}
+        className="flex flex-col items-center w-full"
+      >
         <h2 className="text-[40px] font-display tracking-wider">OUR MENU</h2>
         <p className="mt-4 text-center text-white/60 max-w-xl">
           Our menu varies week to week based on what we're smoking. Follow us for weekly updates.
@@ -176,7 +182,7 @@ export default function MenuWrapper() {
             </button>
           ))}
         </div>
-      </div>
+      </motion.div>
 
       <div className="mt-8 grid md:grid-cols-3 sm:grid-cols-2 grid-cols-1 gap-4 min-h-[450px]">
         {active === 2 ? (
