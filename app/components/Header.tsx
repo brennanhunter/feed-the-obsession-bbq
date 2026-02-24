@@ -62,32 +62,14 @@ export default function Header() {
           </ul>
         </nav>
 
-        {/* Right Side Icons */}
+        {/* Right Side */}
         <div className="flex gap-x-4 items-center">
-          <Link href="/coming-soon">
-            <span className="hover:text-red-600 transition-all cursor-pointer">
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" />
-              </svg>
-            </span>
-          </Link>
-
-          <Link href="/coming-soon">
-            <span className="relative hover:text-red-600 transition-all cursor-pointer">
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M3 1a1 1 0 000 2h1.22l.305 1.222a.997.997 0 00.01.042l1.358 5.43-.893.892C3.74 11.846 4.632 14 6.414 14H15a1 1 0 000-2H6.414l1-1H14a1 1 0 00.894-.553l3-6A1 1 0 0017 3H6.28l-.31-1.243A1 1 0 005 1H3zM16 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM6.5 18a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" />
-              </svg>
-              <span className="w-4 h-4 text-xs grid place-content-center rounded-full bg-red-700 absolute -top-2 -right-3 text-white font-bold">
-                0
-              </span>
-            </span>
-          </Link>
-
-          <Link href="/coming-soon" className="md:inline-block hidden">
-            <button className="text-white px-[30px] py-[8px] rounded-3xl bg-red-600 cursor-pointer hover:opacity-70 transition-all">
-              Order Online
-            </button>
-          </Link>
+          <button
+            onClick={() => window.dispatchEvent(new Event('open-bike-week-modal'))}
+            className="hidden sm:inline-block px-7 py-3 border-2 border-yellow-400 bg-gradient-to-r from-red-700 via-orange-500 to-yellow-400 text-white font-hellsrider text-base uppercase tracking-widest cursor-pointer hover:from-red-800 hover:via-orange-600 hover:to-yellow-500 transition-all duration-200 shadow-[0_0_15px_rgba(250,204,21,0.5)] hover:shadow-[0_0_25px_rgba(250,204,21,0.8)]"
+          >
+            Bike Week Menus
+          </button>
 
           <button 
             className="sm:hidden inline-block hover:text-red-600 transition-all"
@@ -151,6 +133,14 @@ export default function Header() {
               }, 500);
             }}>
               <a href="#menu">Catering</a>
+            </li>
+            <li className="mt-4" onClick={() => {
+              setIsMenuOpen(false);
+              window.dispatchEvent(new Event('open-bike-week-modal'));
+            }}>
+              <button className="px-7 py-3 border-2 border-yellow-400 bg-gradient-to-r from-red-700 via-orange-500 to-yellow-400 text-white font-hellsrider text-base uppercase tracking-widest cursor-pointer hover:from-red-800 hover:via-orange-600 hover:to-yellow-500 transition-all duration-200 shadow-[0_0_15px_rgba(250,204,21,0.5)] hover:shadow-[0_0_25px_rgba(250,204,21,0.8)]">
+                Bike Week Menus
+              </button>
             </li>
           </ul>
         </nav>

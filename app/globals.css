@@ -10,6 +10,7 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-barlow);
   --font-display: var(--font-alfa);
+  --font-hellsrider: var(--font-metal);
 }
 
 body {
@@ -19,7 +20,9 @@ body {
   letter-spacing: 0.01em;
 }
 
-h1, h2, h3 {
-  font-family: var(--font-display);
-  letter-spacing: 0.05em;
+@layer base {
+  h1, h2, h3 {
+    font-family: var(--font-display);
+    letter-spacing: 0.05em;
+  }
 }

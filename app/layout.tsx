@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Alfa_Slab_One, Barlow_Condensed } from "next/font/google";
+import { Alfa_Slab_One, Barlow_Condensed, Metal_Mania } from "next/font/google";
 import "./globals.css";
 
 const alfaSlab = Alfa_Slab_One({
@@ -12,6 +12,12 @@ const barlow = Barlow_Condensed({
   variable: "--font-barlow",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
+});
+
+const metalMania = Metal_Mania({
+  variable: "--font-metal",
+  subsets: ["latin"],
+  weight: "400",
 });
 
 export const metadata: Metadata = {
@@ -27,7 +33,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${barlow.variable} ${alfaSlab.variable} antialiased font-sans`}
+        className={`${barlow.variable} ${alfaSlab.variable} ${metalMania.variable} antialiased font-sans`}
       >
         {children}
       </body>
