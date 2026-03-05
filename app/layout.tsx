@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Alfa_Slab_One, Barlow_Condensed, Metal_Mania } from "next/font/google";
 import "./globals.css";
+import { Analytics } from "@vercel/analytics/next"
 
 const alfaSlab = Alfa_Slab_One({
   variable: "--font-alfa",
@@ -36,6 +37,7 @@ export default function RootLayout({
         className={`${barlow.variable} ${alfaSlab.variable} ${metalMania.variable} antialiased font-sans`}
       >
         {children}
+        <Analytics/>
       </body>
     </html>
   );
