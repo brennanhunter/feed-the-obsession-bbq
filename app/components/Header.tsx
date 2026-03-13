@@ -64,12 +64,14 @@ export default function Header() {
 
         {/* Right Side */}
         <div className="flex gap-x-4 items-center">
+          {/* BIKE WEEK - uncomment for next bike week
           <button
             onClick={() => window.dispatchEvent(new Event('open-bike-week-modal'))}
             className="hidden sm:inline-block px-7 py-3 border-2 border-yellow-400 bg-gradient-to-r from-red-700 via-orange-500 to-yellow-400 text-white font-hellsrider text-base uppercase tracking-widest cursor-pointer hover:from-red-800 hover:via-orange-600 hover:to-yellow-500 transition-all duration-200 shadow-[0_0_15px_rgba(250,204,21,0.5)] hover:shadow-[0_0_25px_rgba(250,204,21,0.8)]"
           >
             Bike Week Menus
           </button>
+          */}
 
           <button 
             className="sm:hidden inline-block hover:text-red-600 transition-all"
@@ -134,6 +136,7 @@ export default function Header() {
             }}>
               <a href="#menu">Catering</a>
             </li>
+            {/* BIKE WEEK - uncomment for next bike week
             <li className="mt-4" onClick={() => {
               setIsMenuOpen(false);
               window.dispatchEvent(new Event('open-bike-week-modal'));
@@ -142,6 +145,7 @@ export default function Header() {
                 Bike Week Menus
               </button>
             </li>
+            */}
           </ul>
         </nav>
       )}
