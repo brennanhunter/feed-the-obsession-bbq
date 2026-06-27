@@ -11,7 +11,7 @@ export default function Header() {
     <header className="h-[5.5rem] sticky top-0 z-50 w-full bg-brand-secondary">
       <div className="container mx-auto text-white flex justify-between items-center h-full px-6">
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity">
+        <Link href="/" className="cursor-pointer hover:opacity-80 transition-opacity">
           <Image
             src="/logo.png"
             alt="FTO Barbeque Logo"
@@ -19,7 +19,6 @@ export default function Header() {
             height={48}
             className="w-12 h-12 object-contain"
           />
-          <span className="text-[1.5rem] font-display font-bold hidden sm:inline">FTO BBQ</span>
         </Link>
 
         {/* Desktop Navigation */}

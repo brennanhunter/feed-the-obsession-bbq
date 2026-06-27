@@ -41,7 +41,7 @@ function BikeWeekContent() {
       {/* Header bar */}
       <div className="bg-brand-secondary py-4 px-6">
         <div className="container mx-auto flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+          <Link href="/" className="cursor-pointer hover:opacity-80 transition-opacity">
             <Image
               src="/logo.png"
               alt="FTO Logo"
@@ -49,7 +49,6 @@ function BikeWeekContent() {
               height={40}
               className="w-10 h-10 object-contain"
             />
-            <span className="text-xl font-display font-bold hidden sm:inline">FTO BBQ</span>
           </Link>
           <span className="text-white/50 text-sm uppercase tracking-widest">
             Veteran Owned
