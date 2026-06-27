@@ -17,7 +17,7 @@ export default function Header() {
             alt="FTO Barbeque Logo"
             width={48}
             height={48}
-            className="w-12 h-12 object-contain"
+            className="w-12 h-12 object-contain invert mix-blend-difference"
           />
         </Link>
 

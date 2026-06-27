@@ -12,7 +12,7 @@ export default function Footer() {
             alt="FTO Barbeque Logo"
             width={120}
             height={120}
-            className="w-28 h-28 object-contain"
+            className="w-28 h-28 object-contain invert mix-blend-difference"
           />
         </div>
         <div className="flex md:justify-between justify-center text-center flex-wrap md:gap-y-0 gap-y-6">
