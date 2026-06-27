@@ -11,13 +11,13 @@ export default function Header() {
     <header className="h-[5.5rem] sticky top-0 z-50 w-full bg-brand-secondary">
       <div className="container mx-auto text-white flex justify-between items-center h-full px-6">
         {/* Logo */}
-        <Link href="/" className="cursor-pointer hover:opacity-80 transition-opacity">
+        <Link href="/" className="self-start cursor-pointer hover:opacity-80 transition-opacity">
           <Image
             src="/logo.png"
             alt="FTO Barbeque Logo"
-            width={48}
-            height={48}
-            className="w-12 h-12 object-contain invert mix-blend-difference"
+            width={160}
+            height={160}
+            className="h-[calc(5.5rem*1.66)] w-auto object-contain invert mix-blend-difference"
           />
         </Link>
 
