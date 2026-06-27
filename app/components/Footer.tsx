@@ -1,5 +1,6 @@
 import Logo from './Logo';
-import { FaFacebookF, FaInstagram, FaPhone, FaEnvelope } from 'react-icons/fa';
+import { FaFacebookF, FaInstagram, FaPhone, FaEnvelope, FaMapMarkerAlt } from 'react-icons/fa';
+import { business } from '@/lib/business';
 
 export default function Footer() {
   return (
@@ -18,14 +19,14 @@ export default function Footer() {
                 <FaPhone className="text-brand-primary" />
                 <a
                   className="hover:text-brand-primary transition-all"
-                  href="tel:812-205-0559"
+                  href={business.phoneHref}
                 >
-                  812-205-0559
+                  {business.phone}
                 </a>
               </div>
-              <a href="mailto:contact@ftobbq.com" className="hover:text-brand-primary transition-all flex items-center justify-center gap-2">
+              <a href={business.emailHref} className="hover:text-brand-primary transition-all flex items-center justify-center gap-2">
                 <FaEnvelope className="text-brand-primary" />
-                <span>contact@ftobbq.com</span>
+                <span>{business.email}</span>
               </a>
             </div>
           </div>
@@ -34,12 +35,12 @@ export default function Footer() {
           <div className="md:flex-1">
             <h3 className="text-[38px] font-display tracking-wider">FEED THE OBSESSION</h3>
             <p className="mt-3 text-white/70 max-w-md mx-auto">
-              Veteran-owned BBQ supporting the biking community. Authentic wood-smoked meats, 
+              Veteran-owned BBQ supporting the biking community. Authentic wood-smoked meats,
               custom smoker builds, and a passion for great food.
             </p>
             <div className="flex items-center justify-center mt-5 gap-x-3">
               <a
-                href="https://www.facebook.com/profile.php?id=61573454007742"
+                href={business.social.facebook}
                 className="w-10 h-10 grid place-content-center bg-white text-brand-secondary rounded-full hover:text-white hover:bg-brand-primary transition-all transform hover:scale-110"
                 target="_blank"
                 rel="noreferrer"
@@ -48,7 +49,7 @@ export default function Footer() {
                 <FaFacebookF size={20} />
               </a>
               <a
-                href="https://www.instagram.com/feed_the_obsession_outdoors/"
+                href={business.social.instagram}
                 className="w-10 h-10 grid place-content-center bg-white text-brand-secondary rounded-full hover:text-white hover:bg-brand-primary transition-all transform hover:scale-110"
                 target="_blank"
                 rel="noreferrer"
@@ -59,20 +60,34 @@ export default function Footer() {
             </div>
           </div>
 
-          {/* Follow Us */}
+          {/* Visit Us */}
           <div className="md:flex-1">
-            <h3 className="text-[30px] font-display tracking-wider">FOLLOW US</h3>
+            <h3 className="text-[30px] font-display tracking-wider">VISIT US</h3>
             <div className="flex flex-col gap-y-2 mt-3 text-white/80">
-              <p className="text-lg">
-                Check Facebook daily for our current location and hours
-              </p>
-              <a 
-                href="https://www.facebook.com/profile.php?id=61573454007742"
+              <a
+                href={business.maps.directions}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-brand-primary hover:text-brand-primary transition-all text-xl font-bold mt-2"
+                className="hover:text-brand-primary transition-all flex items-center justify-center gap-2"
               >
-                Find Us on Facebook →
+                <FaMapMarkerAlt className="text-brand-primary" />
+                <span>{business.address.street}, {business.address.city}, {business.address.state} {business.address.zip}</span>
+              </a>
+              <a
+                href={business.maps.directions}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-brand-primary hover:opacity-80 transition-all text-xl font-bold mt-2"
+              >
+                Get Directions →
+              </a>
+              <a
+                href={business.maps.profile}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-brand-primary transition-all"
+              >
+                Hours &amp; reviews on Google →
               </a>
             </div>
           </div>

@@ -3,6 +3,8 @@
 import { useFormik } from "formik";
 import * as Yup from "yup";
 import { motion } from "framer-motion";
+import { FaDirections } from "react-icons/fa";
+import { business } from "@/lib/business";
 
 const reservationSchema = Yup.object({
   fullName: Yup.string()
@@ -136,14 +138,24 @@ export default function BookTable() {
               BOOK NOW
             </button>
           </form>
-          <div className="lg:flex-1 w-full">
+          <div className="lg:flex-1 w-full flex flex-col gap-3">
             <iframe
-              src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3467.8967890123!2d-81.30519!3d29.02157!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x88e6d43b3b3b3b3b%3A0x1234567890abcdef!2s1750%20N%20Woodland%20Blvd%2C%20DeLand%2C%20FL%2032720!5e0!3m2!1sen!2sus!4v1733427600000"
+              title={`Map to ${business.name}`}
+              src={business.maps.embed}
               allowFullScreen
               loading="lazy"
               referrerPolicy="no-referrer-when-downgrade"
               className="h-full w-full min-h-[400px] rounded-lg"
             ></iframe>
+            <a
+              href={business.maps.directions}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-3xl bg-brand-primary text-white font-bold hover:opacity-80 transition-all"
+            >
+              <FaDirections className="text-xl" />
+              Get Directions — {business.address.street}, {business.address.city}
+            </a>
           </div>
         </motion.div>
       </div>

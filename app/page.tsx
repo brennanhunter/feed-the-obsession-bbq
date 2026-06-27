@@ -4,7 +4,6 @@ import Carousel from "./components/Carousel";
 import FindTheSmoke from "./components/FindTheSmoke";
 import MenuWrapper from "./components/MenuWrapper";
 import CustomSmokers from "./components/CustomSmokers";
-import BookTable from "./components/BookTable";
 import Footer from "./components/Footer";
 // BIKE WEEK - uncomment for next bike week
 // import BikeWeekModal from "./components/BikeWeekModal";
@@ -20,7 +19,6 @@ export default function Home() {
       <FindTheSmoke />
       <MenuWrapper />
       <CustomSmokers />
-      <BookTable />
       <Footer />
     </div>
   );
