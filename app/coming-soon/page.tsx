@@ -1,10 +1,20 @@
 import Link from "next/link";
+import Image from "next/image";
 import { FaFacebookF, FaPhone } from 'react-icons/fa';
 
 export default function ComingSoon() {
   return (
     <div className="min-h-screen bg-brand-secondary flex items-center justify-center px-4 py-20">
       <div className="text-center max-w-3xl">
+        <div className="mb-8">
+          <Image
+            src="/logo.png"
+            alt="FTO Barbeque Logo"
+            width={100}
+            height={100}
+            className="w-24 h-24 object-contain mx-auto"
+          />
+        </div>
         <h1 className="text-5xl md:text-7xl font-display font-bold text-white mb-6">
           Online Ordering Coming Soon
         </h1>

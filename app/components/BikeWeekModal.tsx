@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 
 export default function BikeWeekModal() {
@@ -26,6 +27,15 @@ export default function BikeWeekModal() {
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-sm">
       <div className="relative mx-4 max-w-lg w-full bg-black border-y-4 border-brand-primary p-8 sm:p-10 text-center">
+        {/* Logo */}
+        <Image
+          src="/logo.png"
+          alt="FTO Logo"
+          width={80}
+          height={80}
+          className="w-20 h-20 object-contain mx-auto mb-4"
+        />
+
         {/* Close button */}
         <button
           onClick={() => setIsOpen(false)}
