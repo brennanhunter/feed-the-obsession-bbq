@@ -1,4 +1,4 @@
-import Image from 'next/image';
+import Logo from './Logo';
 import { FaFacebookF, FaInstagram, FaPhone, FaEnvelope } from 'react-icons/fa';
 
 export default function Footer() {
@@ -7,13 +7,7 @@ export default function Footer() {
       <div className="container mx-auto pt-16 pb-6">
         {/* Logo Section */}
         <div className="flex justify-center mb-12">
-          <Image
-            src="/logo.png"
-            alt="FTO Barbeque Logo"
-            width={120}
-            height={120}
-            className="w-28 h-28 object-contain invert mix-blend-difference"
-          />
+          <Logo className="h-28 aspect-[2718/2896] text-white" />
         </div>
         <div className="flex md:justify-between justify-center text-center flex-wrap md:gap-y-0 gap-y-6">
           {/* Contact Us */}

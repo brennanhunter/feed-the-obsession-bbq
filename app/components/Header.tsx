@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
+import Logo from "./Logo";
 import { useState } from "react";
 
 export default function Header() {
@@ -12,13 +12,9 @@ export default function Header() {
       <div className="container mx-auto text-white flex justify-between items-center h-full px-6">
         {/* Logo */}
         <Link href="/" className="self-start cursor-pointer hover:opacity-80 transition-opacity">
-          <Image
-            src="/logo.png"
-            alt="FTO Barbeque Logo"
-            width={160}
-            height={160}
-            className="h-[calc(5.5rem*1.66)] w-auto object-contain invert mix-blend-difference"
-          />
+          {/* Big logo: starts at the header top, overflows 66% of header height below.
+              text-white -> white on the dark header. Swap to text-brand-primary for red. */}
+          <Logo className="h-[calc(5.5rem*1.66)] aspect-[2718/2896] text-white" />
         </Link>
 
         {/* Desktop Navigation */}
