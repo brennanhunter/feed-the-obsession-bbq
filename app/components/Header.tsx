@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Logo from "./Logo";
 import { useState } from "react";
 
 export default function Header() {
@@ -10,12 +9,9 @@ export default function Header() {
   return (
     <header className="h-[5.5rem] sticky top-0 z-50 w-full bg-brand-secondary">
       <div className="container mx-auto text-white flex justify-between items-center h-full px-6">
-        {/* Logo */}
-        <Link href="/" className="self-start cursor-pointer hover:opacity-80 transition-opacity">
-          {/* Big logo: starts at the header top, overflows 66% of header height below.
-              text-white -> white on the dark header. Swap to text-brand-primary for red. */}
-          <Logo className="h-[calc(5.5rem*1.66)] aspect-[2718/2896] text-white" />
-        </Link>
+        {/* Logo lives in <LogoOverlay /> (app/page.tsx) so its blend can react to the
+            carousel behind it. This spacer just reserves its slot so the nav stays put. */}
+        <div aria-hidden className="w-[8.6rem]" />
 
         {/* Desktop Navigation */}
         <nav className="sm:flex hidden">

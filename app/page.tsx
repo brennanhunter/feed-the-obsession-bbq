@@ -1,4 +1,5 @@
 import Header from "./components/Header";
+import LogoOverlay from "./components/LogoOverlay";
 import Carousel from "./components/Carousel";
 import FindTheSmoke from "./components/FindTheSmoke";
 import MenuWrapper from "./components/MenuWrapper";
@@ -14,6 +15,7 @@ export default function Home() {
       {/* BIKE WEEK - uncomment for next bike week */}
       {/* <BikeWeekModal /> */}
       <Header />
+      <LogoOverlay />
       <Carousel />
       <FindTheSmoke />
       <MenuWrapper />
