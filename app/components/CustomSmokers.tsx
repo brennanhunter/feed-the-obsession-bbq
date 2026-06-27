@@ -22,12 +22,12 @@ export default function CustomSmokers() {
       </div>
     ),
     customPaging: () => (
-      <div className="w-3 h-3 bg-white/30 rounded-full hover:bg-red-600 transition-all cursor-pointer"></div>
+      <div className="w-3 h-3 bg-white/30 rounded-full hover:bg-brand-primary transition-all cursor-pointer"></div>
     ),
   };
 
   return (
-    <div className="bg-[#222831] py-20">
+    <div className="bg-brand-secondary py-20">
       <div className="container mx-auto px-6">
         <div className="flex md:flex-row flex-col items-center gap-12">
           {/* Text Content */}
@@ -50,25 +50,25 @@ export default function CustomSmokers() {
             </p>
             <div className="space-y-3 mb-8">
               <div className="flex items-start gap-3">
-                <div className="w-6 h-6 rounded-full bg-red-600 flex-shrink-0 grid place-content-center mt-0.5">
+                <div className="w-6 h-6 rounded-full bg-brand-primary flex-shrink-0 grid place-content-center mt-0.5">
                   <span className="text-white text-sm">✓</span>
                 </div>
                 <p className="text-white/80">Custom design based on your specifications</p>
               </div>
               <div className="flex items-start gap-3">
-                <div className="w-6 h-6 rounded-full bg-red-600 flex-shrink-0 grid place-content-center mt-0.5">
+                <div className="w-6 h-6 rounded-full bg-brand-primary flex-shrink-0 grid place-content-center mt-0.5">
                   <span className="text-white text-sm">✓</span>
                 </div>
                 <p className="text-white/80">Professional fabrication and welding</p>
               </div>
               <div className="flex items-start gap-3">
-                <div className="w-6 h-6 rounded-full bg-red-600 flex-shrink-0 grid place-content-center mt-0.5">
+                <div className="w-6 h-6 rounded-full bg-brand-primary flex-shrink-0 grid place-content-center mt-0.5">
                   <span className="text-white text-sm">✓</span>
                 </div>
                 <p className="text-white/80">Built for commercial or personal use</p>
               </div>
             </div>
-            <button className="text-white px-[30px] py-[8px] rounded-3xl bg-red-600 cursor-pointer hover:opacity-70 transition-all">
+            <button className="text-white px-[30px] py-[8px] rounded-3xl bg-brand-primary cursor-pointer hover:opacity-70 transition-all">
               Inquire About Custom Smokers
             </button>
           </motion.div>
@@ -173,7 +173,7 @@ export default function CustomSmokers() {
               {/* Navigation Arrows */}
               <button
                 onClick={() => sliderRef.current?.slickPrev()}
-                className="absolute left-4 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-black/50 hover:bg-red-600 transition-all grid place-content-center"
+                className="absolute left-4 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-black/50 hover:bg-brand-primary transition-all grid place-content-center"
               >
                 <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
@@ -181,7 +181,7 @@ export default function CustomSmokers() {
               </button>
               <button
                 onClick={() => sliderRef.current?.slickNext()}
-                className="absolute right-4 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-black/50 hover:bg-red-600 transition-all grid place-content-center"
+                className="absolute right-4 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-black/50 hover:bg-brand-primary transition-all grid place-content-center"
               >
                 <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />

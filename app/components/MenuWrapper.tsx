@@ -167,8 +167,8 @@ export default function MenuWrapper() {
               data-category={category}
               className={`px-6 py-2 rounded-3xl transition-all ${
                 index === active
-                  ? "bg-[#222831] text-white"
-                  : "bg-transparent border border-white/20 hover:border-red-600"
+                  ? "bg-brand-secondary text-white"
+                  : "bg-transparent border border-white/20 hover:border-brand-primary"
               }`}
               onClick={() => {
                 setActive(index);
@@ -188,7 +188,7 @@ export default function MenuWrapper() {
         {active === 2 ? (
           // Catering Section
           <div className="col-span-full">
-            <div className="bg-[#222831] rounded-3xl p-12 text-center border-2 border-white/10">
+            <div className="bg-brand-secondary rounded-3xl p-12 text-center border-2 border-white/10">
               <h3 className="text-4xl md:text-5xl font-display tracking-wider mb-6">CATERING AVAILABLE</h3>
               
               {/* Video Section */}
@@ -221,7 +221,7 @@ export default function MenuWrapper() {
                 <p className="text-2xl font-bold mb-4">Call for Pricing & Availability</p>
                 <a 
                   href="tel:812-205-0559" 
-                  className="text-4xl md:text-5xl font-display text-red-600 hover:text-red-500 transition-all tracking-wider"
+                  className="text-4xl md:text-5xl font-display text-brand-primary hover:text-brand-primary transition-all tracking-wider"
                 >
                   812-205-0559
                 </a>
@@ -251,7 +251,7 @@ export default function MenuWrapper() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, delay: index * 0.1 }}
               whileHover={{ scale: 1.03, y: -5 }}
-              className="bg-[#222831] rounded-3xl relative overflow-hidden group"
+              className="bg-brand-secondary rounded-3xl relative overflow-hidden group"
             >
               <div className="w-full bg-white/10 h-[210px] grid place-content-center rounded-bl-[46px] rounded-tl-2xl rounded-tr-2xl">
                 <div className="relative w-36 h-36 hover:scale-110 transition-all">
@@ -268,7 +268,7 @@ export default function MenuWrapper() {
                 <p className="text-[15px] text-white/70">{item.description}</p>
                 <div className="flex justify-between items-center mt-4">
                   <span className="text-xl font-bold">${item.price}</span>
-                  <button className="w-10 h-10 rounded-full bg-red-600 grid place-content-center hover:opacity-70 transition-all">
+                  <button className="w-10 h-10 rounded-full bg-brand-primary grid place-content-center hover:opacity-70 transition-all">
                     <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                       <path d="M3 1a1 1 0 000 2h1.22l.305 1.222a.997.997 0 00.01.042l1.358 5.43-.893.892C3.74 11.846 4.632 14 6.414 14H15a1 1 0 000-2H6.414l1-1H14a1 1 0 00.894-.553l3-6A1 1 0 0017 3H6.28l-.31-1.243A1 1 0 005 1H3zM16 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM6.5 18a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" />
                     </svg>

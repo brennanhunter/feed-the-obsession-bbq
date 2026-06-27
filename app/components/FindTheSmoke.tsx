@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 
 export default function FindTheSmoke() {
   return (
-    <div id="about" className="bg-black border-y-4 border-red-600 py-16">
+    <div id="about" className="bg-black border-y-4 border-brand-primary py-16">
       <div className="container mx-auto px-6">
         <motion.div 
           initial={{ opacity: 0, y: 30 }}
@@ -22,29 +22,29 @@ export default function FindTheSmoke() {
             We move with the community - bike rallies, events, and wherever the road takes us.
           </p>
           
-          <p className="text-3xl font-bold mb-8 text-red-600">
+          <p className="text-3xl font-bold mb-8 text-brand-primary">
             We roam. You hunt. The BBQ is worth it.
           </p>
 
           <div className="flex flex-col gap-4 items-center mb-8">
             <div className="flex items-center gap-3 text-xl">
-              <FaFacebookF className="text-red-600 text-2xl" />
+              <FaFacebookF className="text-brand-primary text-2xl" />
               <a 
                 href="https://www.facebook.com/profile.php?id=61573454007742" 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="hover:text-red-600 transition-all underline"
+                className="hover:text-brand-primary transition-all underline"
               >
                 Follow us on Facebook for daily drops
               </a>
             </div>
             
             <div className="flex items-center gap-3 text-xl">
-              <FaPhone className="text-red-600 text-2xl" />
+              <FaPhone className="text-brand-primary text-2xl" />
               <span>Call </span>
               <a 
                 href="tel:812-205-0559" 
-                className="text-red-600 font-bold text-2xl hover:text-red-500 transition-all"
+                className="text-brand-primary font-bold text-2xl hover:text-brand-primary transition-all"
               >
                 812-205-0559
               </a>

@@ -1,26 +1,34 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useState } from "react";
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
-    <header className="h-[5.5rem] sticky top-0 z-50 w-full bg-[#222831]">
+    <header className="h-[5.5rem] sticky top-0 z-50 w-full bg-brand-secondary">
       <div className="container mx-auto text-white flex justify-between items-center h-full px-6">
         {/* Logo */}
-        <Link href="/" className="text-[2rem] font-display font-bold cursor-pointer">
-          FTO BBQ
+        <Link href="/" className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity">
+          <Image
+            src="/logo.png"
+            alt="FTO Barbeque Logo"
+            width={48}
+            height={48}
+            className="w-12 h-12 object-contain"
+          />
+          <span className="text-[1.5rem] font-display font-bold hidden sm:inline">FTO BBQ</span>
         </Link>
 
         {/* Desktop Navigation */}
         <nav className="sm:flex hidden">
           <ul className="flex gap-x-2 items-center">
-            <li className="px-[5px] py-[10px] uppercase hover:text-red-600 cursor-pointer transition-all">
+            <li className="px-[5px] py-[10px] uppercase hover:text-brand-primary cursor-pointer transition-all">
               <Link href="/">Home</Link>
             </li>
-            <li className="px-[5px] py-[10px] uppercase hover:text-red-600 cursor-pointer transition-all">
+            <li className="px-[5px] py-[10px] uppercase hover:text-brand-primary cursor-pointer transition-all">
               <a href="#menu" onClick={(e) => {
                 e.preventDefault();
                 const menuElement = document.getElementById('menu');
@@ -35,7 +43,7 @@ export default function Header() {
                 }, 500);
               }}>Menu</a>
             </li>
-            <li className="px-[5px] py-[10px] uppercase hover:text-red-600 cursor-pointer transition-all">
+            <li className="px-[5px] py-[10px] uppercase hover:text-brand-primary cursor-pointer transition-all">
               <a href="#about" onClick={(e) => {
                 e.preventDefault();
                 const aboutElement = document.getElementById('about');
@@ -44,7 +52,7 @@ export default function Header() {
                 }
               }}>About</a>
             </li>
-            <li className="px-[5px] py-[10px] uppercase hover:text-red-600 cursor-pointer transition-all">
+            <li className="px-[5px] py-[10px] uppercase hover:text-brand-primary cursor-pointer transition-all">
               <a href="#menu" onClick={(e) => {
                 e.preventDefault();
                 const menuElement = document.getElementById('menu');
@@ -74,7 +82,7 @@ export default function Header() {
           */}
 
           <button 
-            className="sm:hidden inline-block hover:text-red-600 transition-all"
+            className="sm:hidden inline-block hover:text-brand-primary transition-all"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
           >
             <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
@@ -94,10 +102,10 @@ export default function Header() {
             ✕
           </button>
           <ul className="flex flex-col items-center gap-4">
-            <li className="px-[5px] py-[10px] uppercase hover:text-red-600 cursor-pointer" onClick={() => setIsMenuOpen(false)}>
+            <li className="px-[5px] py-[10px] uppercase hover:text-brand-primary cursor-pointer" onClick={() => setIsMenuOpen(false)}>
               <Link href="/">Home</Link>
             </li>
-            <li className="px-[5px] py-[10px] uppercase hover:text-red-600 cursor-pointer" onClick={() => {
+            <li className="px-[5px] py-[10px] uppercase hover:text-brand-primary cursor-pointer" onClick={() => {
               setIsMenuOpen(false);
               const menuElement = document.getElementById('menu');
               if (menuElement) {
@@ -112,7 +120,7 @@ export default function Header() {
             }}>
               <a href="#menu">Menu</a>
             </li>
-            <li className="px-[5px] py-[10px] uppercase hover:text-red-600 cursor-pointer" onClick={() => {
+            <li className="px-[5px] py-[10px] uppercase hover:text-brand-primary cursor-pointer" onClick={() => {
               setIsMenuOpen(false);
               const aboutElement = document.getElementById('about');
               if (aboutElement) {
@@ -121,7 +129,7 @@ export default function Header() {
             }}>
               <a href="#about">About</a>
             </li>
-            <li className="px-[5px] py-[10px] uppercase hover:text-red-600 cursor-pointer" onClick={() => {
+            <li className="px-[5px] py-[10px] uppercase hover:text-brand-primary cursor-pointer" onClick={() => {
               setIsMenuOpen(false);
               const menuElement = document.getElementById('menu');
               if (menuElement) {

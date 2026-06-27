@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Typewriter from "typewriter-effect";
@@ -38,10 +39,17 @@ function BikeWeekContent() {
   return (
     <div className="min-h-screen bg-black text-white">
       {/* Header bar */}
-      <div className="bg-[#222831] py-4 px-6">
+      <div className="bg-brand-secondary py-4 px-6">
         <div className="container mx-auto flex items-center justify-between">
-          <Link href="/" className="text-2xl font-display font-bold hover:text-red-600 transition-all">
-            FTO BBQ
+          <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+            <Image
+              src="/logo.png"
+              alt="FTO Logo"
+              width={40}
+              height={40}
+              className="w-10 h-10 object-contain"
+            />
+            <span className="text-xl font-display font-bold hidden sm:inline">FTO BBQ</span>
           </Link>
           <span className="text-white/50 text-sm uppercase tracking-widest">
             Veteran Owned
@@ -51,7 +59,17 @@ function BikeWeekContent() {
 
       {/* Hero */}
       <div className="relative py-12 text-center">
-        <h1 className="font-hellsrider text-5xl sm:text-6xl uppercase tracking-wider mb-3 [&_.Typewriter__cursor]:hidden">
+        {/* Background logo */}
+        <div className="absolute inset-0 flex items-center justify-center opacity-5 pointer-events-none z-0">
+          <Image
+            src="/logo.png"
+            alt="FTO Logo Background"
+            width={600}
+            height={600}
+            className="w-[600px] h-[600px] object-contain"
+          />
+        </div>
+        <h1 className="font-hellsrider text-5xl sm:text-6xl uppercase tracking-wider mb-3 [&_.Typewriter__cursor]:hidden relative z-10">
           <Typewriter
             options={{
               strings: ["Bike Week 2026"],
@@ -67,7 +85,7 @@ function BikeWeekContent() {
           initial={{ width: 0 }}
           animate={{ width: 96 }}
           transition={{ duration: 0.6, delay: 0.3 }}
-          className="h-1 bg-red-600 mx-auto mb-4"
+          className="h-1 bg-brand-primary mx-auto mb-4"
         />
         <motion.p
           initial={{ opacity: 0 }}
@@ -82,7 +100,7 @@ function BikeWeekContent() {
           initial={{ scaleX: 0 }}
           animate={{ scaleX: 1 }}
           transition={{ duration: 0.8, delay: 0.8, ease: "easeOut" }}
-          className="absolute bottom-0 left-0 w-full h-1 bg-red-600 origin-left"
+          className="absolute bottom-0 left-0 w-full h-1 bg-brand-primary origin-left"
         />
       </div>
 
@@ -93,7 +111,7 @@ function BikeWeekContent() {
             onClick={() => setActiveTab("obs")}
             className={`px-8 sm:px-12 py-4 font-extrabold text-lg uppercase tracking-widest cursor-pointer transition-all duration-200 border-b-4 ${
               activeTab === "obs"
-                ? "text-white border-red-600 bg-white/5"
+                ? "text-white border-brand-primary bg-white/5"
                 : "text-white/40 border-transparent hover:text-white/70 hover:border-white/20"
             }`}
           >
@@ -103,7 +121,7 @@ function BikeWeekContent() {
             onClick={() => setActiveTab("sorry-charlies")}
             className={`px-8 sm:px-12 py-4 font-extrabold text-lg uppercase tracking-widest cursor-pointer transition-all duration-200 border-b-4 ${
               activeTab === "sorry-charlies"
-                ? "text-white border-red-600 bg-white/5"
+                ? "text-white border-brand-primary bg-white/5"
                 : "text-white/40 border-transparent hover:text-white/70 hover:border-white/20"
             }`}
           >
@@ -140,7 +158,7 @@ function BikeWeekContent() {
                   initial={{ width: 0 }}
                   animate={{ width: 64 }}
                   transition={{ duration: 0.5, delay: 0.5 }}
-                  className="h-1 bg-red-600 mx-auto mb-8"
+                  className="h-1 bg-brand-primary mx-auto mb-8"
                 />
 
                 <div className="space-y-6 mb-12">
@@ -150,7 +168,7 @@ function BikeWeekContent() {
                         <p className="text-xl font-bold uppercase tracking-wide">2 Hot Dogs (All Beef)</p>
                         <p className="text-white/50 text-sm mt-1">Served with a side of coleslaw</p>
                       </div>
-                      <p className="text-red-600 font-extrabold text-2xl ml-4 shrink-0">$10</p>
+                      <p className="text-brand-primary font-extrabold text-2xl ml-4 shrink-0">$10</p>
                     </div>
                   </MenuLine>
 
@@ -160,7 +178,7 @@ function BikeWeekContent() {
                         <p className="text-xl font-bold uppercase tracking-wide">Sausage, Peppers &amp; Onions</p>
                         <p className="text-white/50 text-sm mt-1">Served with coleslaw</p>
                       </div>
-                      <p className="text-red-600 font-extrabold text-2xl ml-4 shrink-0">$12</p>
+                      <p className="text-brand-primary font-extrabold text-2xl ml-4 shrink-0">$12</p>
                     </div>
                   </MenuLine>
                 </div>
@@ -170,12 +188,12 @@ function BikeWeekContent() {
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ duration: 0.5, delay: 0.8 }}
-                  className="border-2 border-red-600 p-6 sm:p-8"
+                  className="border-2 border-brand-primary p-6 sm:p-8"
                 >
-                  <h3 className="font-display text-2xl text-center uppercase tracking-wider mb-1 text-red-600">
+                  <h3 className="font-display text-2xl text-center uppercase tracking-wider mb-1 text-brand-primary">
                     Special Events
                   </h3>
-                  <div className="w-12 h-1 bg-red-600 mx-auto mb-6" />
+                  <div className="w-12 h-1 bg-brand-primary mx-auto mb-6" />
 
                   <div className="space-y-6">
                     <MenuLine index={3}>
@@ -235,7 +253,7 @@ function BikeWeekContent() {
                   initial={{ width: 0 }}
                   animate={{ width: 64 }}
                   transition={{ duration: 0.5, delay: 0.6 }}
-                  className="h-1 bg-red-600 mx-auto mb-8"
+                  className="h-1 bg-brand-primary mx-auto mb-8"
                 />
 
                 {/* Mains */}
@@ -254,7 +272,7 @@ function BikeWeekContent() {
                         <p className="text-xl font-bold uppercase tracking-wide">Brisket Sandwich</p>
                         <p className="text-white/50 text-sm mt-1">With choice of side</p>
                       </div>
-                      <p className="text-red-600 font-extrabold text-2xl ml-4 shrink-0">$18</p>
+                      <p className="text-brand-primary font-extrabold text-2xl ml-4 shrink-0">$18</p>
                     </div>
                   </MenuLine>
 
@@ -264,7 +282,7 @@ function BikeWeekContent() {
                         <p className="text-xl font-bold uppercase tracking-wide">Pulled Pork Sandwich</p>
                         <p className="text-white/50 text-sm mt-1">With choice of side</p>
                       </div>
-                      <p className="text-red-600 font-extrabold text-2xl ml-4 shrink-0">$15</p>
+                      <p className="text-brand-primary font-extrabold text-2xl ml-4 shrink-0">$15</p>
                     </div>
                   </MenuLine>
                 </div>
@@ -296,7 +314,7 @@ function BikeWeekContent() {
                 <MenuLine index={4}>
                   <div className="bg-white/5 p-4 text-center">
                     <p className="text-white/60 text-sm uppercase tracking-wider">
-                      Extra Side &mdash; <span className="text-red-600 font-bold">$3</span>
+                      Extra Side &mdash; <span className="text-brand-primary font-bold">$3</span>
                     </p>
                   </div>
                 </MenuLine>
@@ -309,7 +327,7 @@ function BikeWeekContent() {
         <div className="text-center pb-12">
           <Link
             href="/"
-            className="text-white/40 text-sm uppercase tracking-widest hover:text-red-600 transition-all"
+            className="text-white/40 text-sm uppercase tracking-widest hover:text-brand-primary transition-all"
           >
             &larr; Back to Main Site
           </Link>

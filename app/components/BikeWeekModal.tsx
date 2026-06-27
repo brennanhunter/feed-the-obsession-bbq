@@ -25,11 +25,11 @@ export default function BikeWeekModal() {
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-sm">
-      <div className="relative mx-4 max-w-lg w-full bg-black border-y-4 border-red-600 p-8 sm:p-10 text-center">
+      <div className="relative mx-4 max-w-lg w-full bg-black border-y-4 border-brand-primary p-8 sm:p-10 text-center">
         {/* Close button */}
         <button
           onClick={() => setIsOpen(false)}
-          className="absolute top-3 right-4 text-white/50 hover:text-red-600 transition-all text-2xl font-bold cursor-pointer"
+          className="absolute top-3 right-4 text-white/50 hover:text-brand-primary transition-all text-2xl font-bold cursor-pointer"
           aria-label="Close"
         >
           ✕
@@ -41,10 +41,10 @@ export default function BikeWeekModal() {
         </h2>
 
         {/* Red accent line */}
-        <div className="w-24 h-1 bg-red-600 mx-auto mb-6" />
+        <div className="w-24 h-1 bg-brand-primary mx-auto mb-6" />
 
         {/* Subheading */}
-        <p className="text-red-600 text-lg sm:text-xl font-bold uppercase tracking-wider mb-2">
+        <p className="text-brand-primary text-lg sm:text-xl font-bold uppercase tracking-wider mb-2">
           Welcome, You Beautiful Degenerates.
         </p>
 
@@ -62,13 +62,13 @@ export default function BikeWeekModal() {
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <button
             onClick={() => router.push("/bike-week?location=obs")}
-            className="font-hellsrider px-8 py-4 bg-red-600 text-white text-lg uppercase tracking-widest cursor-pointer hover:bg-red-700 transition-all duration-200"
+            className="font-hellsrider px-8 py-4 bg-brand-primary text-white text-lg uppercase tracking-widest cursor-pointer hover:bg-brand-primary transition-all duration-200"
           >
             OB&apos;s
           </button>
           <button
             onClick={() => router.push("/bike-week?location=sorry-charlies")}
-            className="font-hellsrider px-8 py-4 bg-red-600 text-white text-lg uppercase tracking-widest cursor-pointer hover:bg-red-700 transition-all duration-200"
+            className="font-hellsrider px-8 py-4 bg-brand-primary text-white text-lg uppercase tracking-widest cursor-pointer hover:bg-brand-primary transition-all duration-200"
           >
             Sorry Charlie&apos;s
           </button>

@@ -39,6 +39,16 @@ export default function Carousel() {
               className="object-cover"
             />
           </div>
+          {/* Oversized background logo */}
+          <div className="absolute inset-0 flex items-center justify-end opacity-10 pointer-events-none z-5">
+            <Image
+              src="/logo.png"
+              alt="FTO Logo Background"
+              width={800}
+              height={800}
+              className="w-[800px] h-[800px] object-contain"
+            />
+          </div>
           <div className="relative z-10 mt-48 flex flex-col items-start gap-y-10 px-6">
             <motion.div 
               whileHover={{ scale: 1.02 }}
@@ -46,7 +56,7 @@ export default function Carousel() {
               className="cursor-pointer group"
             >
               <h1 className="text-6xl font-display tracking-wider text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)] relative overflow-hidden">
-                <span className="relative z-10 group-hover:text-red-600 transition-colors duration-300">
+                <span className="relative z-10 group-hover:text-brand-primary transition-colors duration-300">
                   FEED THE OBSESSION
                 </span>
                 <span className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/40 to-transparent pointer-events-none"></span>
@@ -56,7 +66,7 @@ export default function Carousel() {
                 high quality ingredients, and a passion for great BBQ.
               </p>
               <a href="/coming-soon">
-                <button className="text-white px-[30px] py-[8px] rounded-3xl bg-red-600 cursor-pointer hover:bg-red-700 hover:scale-105 transition-all mt-6">
+                <button className="text-white px-[30px] py-[8px] rounded-3xl bg-brand-primary cursor-pointer hover:bg-brand-primary hover:scale-105 transition-all mt-6">
                   Order Now
                 </button>
               </a>
@@ -72,6 +82,16 @@ export default function Carousel() {
               className="object-cover"
             />
           </div>
+          {/* Oversized background logo */}
+          <div className="absolute inset-0 flex items-center justify-end opacity-10 pointer-events-none z-5">
+            <Image
+              src="/logo.png"
+              alt="FTO Logo Background"
+              width={800}
+              height={800}
+              className="w-[800px] h-[800px] object-contain"
+            />
+          </div>
           <div className="relative z-10 mt-48 flex flex-col items-start gap-y-10 px-6">
             <motion.div 
               whileHover={{ scale: 1.02 }}
@@ -79,7 +99,7 @@ export default function Carousel() {
               className="cursor-pointer group"
             >
               <h1 className="text-6xl font-display tracking-wider text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)] relative overflow-hidden">
-                <span className="relative z-10 group-hover:text-red-600 transition-colors duration-300">
+                <span className="relative z-10 group-hover:text-brand-primary transition-colors duration-300">
                   WOOD SMOKED BBQ
                 </span>
                 <span className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/40 to-transparent pointer-events-none"></span>
@@ -101,7 +121,7 @@ export default function Carousel() {
                   }
                 }, 500);
               }}>
-                <button className="text-white px-[30px] py-[8px] rounded-3xl bg-red-600 cursor-pointer hover:bg-red-700 hover:scale-105 transition-all mt-6">
+                <button className="text-white px-[30px] py-[8px] rounded-3xl bg-brand-primary cursor-pointer hover:bg-brand-primary hover:scale-105 transition-all mt-6">
                   See Menu
                 </button>
               </a>
@@ -120,6 +140,16 @@ export default function Carousel() {
               <source src="/pictures/smoker-process/prepwork.mp4" type="video/mp4" />
             </video>
           </div>
+          {/* Oversized background logo */}
+          <div className="absolute inset-0 flex items-center justify-end opacity-10 pointer-events-none z-5">
+            <Image
+              src="/logo.png"
+              alt="FTO Logo Background"
+              width={800}
+              height={800}
+              className="w-[800px] h-[800px] object-contain"
+            />
+          </div>
           <div className="relative z-10 mt-48 flex flex-col items-start gap-y-10 px-6">
             <motion.div 
               whileHover={{ scale: 1.02 }}
@@ -127,7 +157,7 @@ export default function Carousel() {
               className="cursor-pointer group"
             >
               <h1 className="text-6xl font-display tracking-wider text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)] relative overflow-hidden">
-                <span className="relative z-10 group-hover:text-red-600 transition-colors duration-300">
+                <span className="relative z-10 group-hover:text-brand-primary transition-colors duration-300">
                   AUTHENTIC PREP WORK
                 </span>
                 <span className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/40 to-transparent pointer-events-none"></span>
@@ -149,7 +179,7 @@ export default function Carousel() {
                   }
                 }, 500);
               }}>
-                <button className="text-white px-[30px] py-[8px] rounded-3xl bg-red-600 cursor-pointer hover:bg-red-700 hover:scale-105 transition-all mt-6">
+                <button className="text-white px-[30px] py-[8px] rounded-3xl bg-brand-primary cursor-pointer hover:bg-brand-primary hover:scale-105 transition-all mt-6">
                   See Our Menu
                 </button>
               </a>

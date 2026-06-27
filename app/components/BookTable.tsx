@@ -85,7 +85,7 @@ export default function BookTable() {
   ];
 
   return (
-    <div className="bg-[#222831] py-20">
+    <div className="bg-brand-secondary py-20">
       <div className="container mx-auto px-6">
         <motion.h2 
           initial={{ opacity: 0, y: 30 }}
@@ -116,7 +116,7 @@ export default function BookTable() {
                       onBlur={handleBlur}
                       className={`h-14 w-full border outline-none px-4 peer bg-black/30 text-white
                       ${input.type !== "datetime-local" && "pt-2"}
-                      ${input.touched && input.errorMessage ? "border-red-500" : "border-white/20"}
+                      ${input.touched && input.errorMessage ? "border-brand-primary" : "border-white/20"}
                       `}
                       required
                     />
@@ -127,12 +127,12 @@ export default function BookTable() {
                     )}
                   </label>
                   {input.touched && (
-                    <span className="text-xs text-red-500">{input.errorMessage}</span>
+                    <span className="text-xs text-brand-primary">{input.errorMessage}</span>
                   )}
                 </div>
               ))}
             </div>
-            <button className="btn-primary mt-4 text-white px-[30px] py-[8px] rounded-3xl bg-red-600 cursor-pointer hover:bg-red-700 transition-all" type="submit">
+            <button className="btn-primary mt-4 text-white px-[30px] py-[8px] rounded-3xl bg-brand-primary cursor-pointer hover:bg-brand-primary transition-all" type="submit">
               BOOK NOW
             </button>
           </form>
