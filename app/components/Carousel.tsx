@@ -33,8 +33,8 @@ export default function Carousel() {
         <div className="h-screen relative">
           <div className="absolute top-0 left-0 w-full h-full">
             <Image
-              src="/pictures/business/ScooterCookingInGrass.jpg"
-              alt="BBQ Setup"
+              src="/storefront.jpeg"
+              alt="Feed The Obsession BBQ storefront and patio in DeLand, FL"
               fill
               priority
               className="object-cover"
