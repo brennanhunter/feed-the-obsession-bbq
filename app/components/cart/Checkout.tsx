@@ -72,7 +72,7 @@ export default function Checkout({ onDone }: { onDone?: () => void }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           sourceId: result.token,
-          items: items.map((i) => ({ id: i.id, quantity: i.qty })),
+          items: items.map((i) => ({ id: i.id, quantity: i.qty, sides: i.sides?.map((s) => s.id) ?? [] })),
           channel,
           table: channel === "DINE_IN" ? table.trim() : undefined,
           name: name.trim(),

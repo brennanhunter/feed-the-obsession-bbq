@@ -2,24 +2,39 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 
+export type CartSide = { id: number; title: string };
+
 export type CartItem = {
+  uid: string; // unique per item + chosen sides combo
   id: number;
   title: string;
-  price: number; // dollars
+  price: number; // dollars (base price; included sides are free)
   qty: number;
+  sides?: CartSide[]; // for plates that come with chosen sides
 };
+
+type AddInput = { id: number; title: string; price: number; sides?: CartSide[] };
 
 type Ctx = {
   items: CartItem[];
-  add: (i: Omit<CartItem, "qty">) => void;
-  remove: (id: number) => void;
-  setQty: (id: number, qty: number) => void;
+  add: (i: AddInput) => void;
+  remove: (uid: string) => void;
+  setQty: (uid: string, qty: number) => void;
   clear: () => void;
   count: number;
   totalCents: number;
 };
 
 const CartCtx = createContext<Ctx | null>(null);
+
+// Same item + same sides stack together; different sides are separate lines.
+function makeUid(id: number, sides?: CartSide[]) {
+  if (!sides || sides.length === 0) return String(id);
+  return `${id}:${sides
+    .map((s) => s.id)
+    .sort((a, b) => a - b)
+    .join("-")}`;
+}
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
@@ -42,22 +57,24 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   }, [items]);
 
-  const add: Ctx["add"] = (i) =>
+  const add: Ctx["add"] = (i) => {
+    const uid = makeUid(i.id, i.sides);
     setItems((prev) => {
-      const found = prev.find((p) => p.id === i.id);
+      const found = prev.find((p) => p.uid === uid);
       return found
-        ? prev.map((p) => (p.id === i.id ? { ...p, qty: p.qty + 1 } : p))
-        : [...prev, { ...i, qty: 1 }];
+        ? prev.map((p) => (p.uid === uid ? { ...p, qty: p.qty + 1 } : p))
+        : [...prev, { uid, id: i.id, title: i.title, price: i.price, qty: 1, sides: i.sides }];
     });
+  };
 
-  const remove: Ctx["remove"] = (id) =>
-    setItems((prev) => prev.filter((p) => p.id !== id));
+  const remove: Ctx["remove"] = (uid) =>
+    setItems((prev) => prev.filter((p) => p.uid !== uid));
 
-  const setQty: Ctx["setQty"] = (id, qty) =>
+  const setQty: Ctx["setQty"] = (uid, qty) =>
     setItems((prev) =>
       qty <= 0
-        ? prev.filter((p) => p.id !== id)
-        : prev.map((p) => (p.id === id ? { ...p, qty } : p))
+        ? prev.filter((p) => p.uid !== uid)
+        : prev.map((p) => (p.uid === uid ? { ...p, qty } : p))
     );
 
   const clear = () => setItems([]);

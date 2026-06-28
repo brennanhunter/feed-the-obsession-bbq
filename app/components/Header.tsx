@@ -27,43 +27,13 @@ export default function Header({ overlayLogo = false }: { overlayLogo?: boolean 
               <Link href="/">Home</Link>
             </li>
             <li className="px-[5px] py-[10px] uppercase hover:text-brand-primary cursor-pointer transition-all">
-              <a href="#menu" onClick={(e) => {
-                e.preventDefault();
-                const menuElement = document.getElementById('menu');
-                if (menuElement) {
-                  menuElement.scrollIntoView({ behavior: 'smooth' });
-                }
-                setTimeout(() => {
-                  const bbqButton = document.querySelector('[data-category="BBQ Plates"]') as HTMLButtonElement;
-                  if (bbqButton) {
-                    bbqButton.click();
-                  }
-                }, 500);
-              }}>Menu</a>
+              <Link href="/menu">Menu</Link>
             </li>
             <li className="px-[5px] py-[10px] uppercase hover:text-brand-primary cursor-pointer transition-all">
-              <a href="#about" onClick={(e) => {
-                e.preventDefault();
-                const aboutElement = document.getElementById('about');
-                if (aboutElement) {
-                  aboutElement.scrollIntoView({ behavior: 'smooth' });
-                }
-              }}>About</a>
+              <Link href="/#about">About</Link>
             </li>
             <li className="px-[5px] py-[10px] uppercase hover:text-brand-primary cursor-pointer transition-all">
-              <a href="#menu" onClick={(e) => {
-                e.preventDefault();
-                const menuElement = document.getElementById('menu');
-                if (menuElement) {
-                  menuElement.scrollIntoView({ behavior: 'smooth' });
-                }
-                setTimeout(() => {
-                  const cateringButton = document.querySelector('[data-category="Catering"]') as HTMLButtonElement;
-                  if (cateringButton) {
-                    cateringButton.click();
-                  }
-                }, 500);
-              }}>Catering</a>
+              <Link href="/menu#catering">Catering</Link>
             </li>
           </ul>
         </nav>
@@ -103,44 +73,14 @@ export default function Header({ overlayLogo = false }: { overlayLogo?: boolean 
             <li className="px-[5px] py-[10px] uppercase hover:text-brand-primary cursor-pointer" onClick={() => setIsMenuOpen(false)}>
               <Link href="/">Home</Link>
             </li>
-            <li className="px-[5px] py-[10px] uppercase hover:text-brand-primary cursor-pointer" onClick={() => {
-              setIsMenuOpen(false);
-              const menuElement = document.getElementById('menu');
-              if (menuElement) {
-                menuElement.scrollIntoView({ behavior: 'smooth' });
-              }
-              setTimeout(() => {
-                const bbqButton = document.querySelector('[data-category="BBQ Plates"]') as HTMLButtonElement;
-                if (bbqButton) {
-                  bbqButton.click();
-                }
-              }, 500);
-            }}>
-              <a href="#menu">Menu</a>
+            <li className="px-[5px] py-[10px] uppercase hover:text-brand-primary cursor-pointer" onClick={() => setIsMenuOpen(false)}>
+              <Link href="/menu">Menu</Link>
             </li>
-            <li className="px-[5px] py-[10px] uppercase hover:text-brand-primary cursor-pointer" onClick={() => {
-              setIsMenuOpen(false);
-              const aboutElement = document.getElementById('about');
-              if (aboutElement) {
-                aboutElement.scrollIntoView({ behavior: 'smooth' });
-              }
-            }}>
-              <a href="#about">About</a>
+            <li className="px-[5px] py-[10px] uppercase hover:text-brand-primary cursor-pointer" onClick={() => setIsMenuOpen(false)}>
+              <Link href="/#about">About</Link>
             </li>
-            <li className="px-[5px] py-[10px] uppercase hover:text-brand-primary cursor-pointer" onClick={() => {
-              setIsMenuOpen(false);
-              const menuElement = document.getElementById('menu');
-              if (menuElement) {
-                menuElement.scrollIntoView({ behavior: 'smooth' });
-              }
-              setTimeout(() => {
-                const cateringButton = document.querySelector('[data-category="Catering"]') as HTMLButtonElement;
-                if (cateringButton) {
-                  cateringButton.click();
-                }
-              }, 500);
-            }}>
-              <a href="#menu">Catering</a>
+            <li className="px-[5px] py-[10px] uppercase hover:text-brand-primary cursor-pointer" onClick={() => setIsMenuOpen(false)}>
+              <Link href="/menu#catering">Catering</Link>
             </li>
             {/* BIKE WEEK - uncomment for next bike week
             <li className="mt-4" onClick={() => {

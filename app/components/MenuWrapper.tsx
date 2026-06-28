@@ -3,16 +3,26 @@
 import Image from "next/image";
 import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import { menuItems } from "@/lib/menu";
+import { menuItems, type MenuItem } from "@/lib/menu";
 import { useCart } from "./cart/CartContext";
+import SidePicker from "./cart/SidePicker";
 
 const categories = ["BBQ Plates", "Sides", "Catering"];
+const sideOptions = menuItems.filter((i) => i.category === "Sides");
 
 export default function MenuWrapper() {
   const [active, setActive] = useState(0);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [videoOpacity, setVideoOpacity] = useState(1);
+  const [sidePickerItem, setSidePickerItem] = useState<MenuItem | null>(null);
   const { add } = useCart();
+
+  // Deep link: /menu#catering opens the Catering tab.
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.location.hash === "#catering") {
+      setActive(2);
+    }
+  }, []);
 
   useEffect(() => {
     const handleShowCatering = () => {
@@ -189,7 +199,13 @@ export default function MenuWrapper() {
                 <div className="flex justify-between items-center mt-4">
                   <span className="text-xl font-bold">${item.price}</span>
                   <button
-                    onClick={() => add({ id: item.id, title: item.title, price: item.price })}
+                    onClick={() => {
+                      if (item.includedSides) {
+                        setSidePickerItem(item);
+                      } else {
+                        add({ id: item.id, title: item.title, price: item.price });
+                      }
+                    }}
                     aria-label={`Add ${item.title} to order`}
                     className="w-10 h-10 rounded-full bg-brand-primary grid place-content-center hover:opacity-70 transition-all cursor-pointer"
                   >
@@ -203,6 +219,24 @@ export default function MenuWrapper() {
           ))
         )}
       </div>
+
+      {sidePickerItem && (
+        <SidePicker
+          item={sidePickerItem}
+          sides={sideOptions}
+          required={sidePickerItem.includedSides ?? 2}
+          onConfirm={(chosen) => {
+            add({
+              id: sidePickerItem.id,
+              title: sidePickerItem.title,
+              price: sidePickerItem.price,
+              sides: chosen,
+            });
+            setSidePickerItem(null);
+          }}
+          onClose={() => setSidePickerItem(null)}
+        />
+      )}
     </div>
   );
 }

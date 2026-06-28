@@ -4,7 +4,7 @@ import { getMenuItem } from "@/lib/menu";
 
 // Browser sends only item IDs + quantities; the server looks up prices itself,
 // so a tampered request can never change what gets charged.
-type CartLine = { id: number; quantity: number };
+type CartLine = { id: number; quantity: number; sides?: number[] };
 type Body = {
   sourceId: string;
   items: CartLine[];
@@ -28,7 +28,7 @@ export async function POST(req: Request) {
   if (!body.name?.trim() || !body.phone?.trim())
     return new Response("Name and phone are required", { status: 400 });
 
-  // Build line items from SERVER-SIDE prices.
+  // Build line items from SERVER-SIDE prices, validating chosen sides too.
   const lineItems = [];
   for (const line of body.items) {
     const item = getMenuItem(Number(line.id));
@@ -36,10 +36,30 @@ export async function POST(req: Request) {
     if (!item || !Number.isFinite(qty) || qty < 1) {
       return new Response("Invalid item in cart", { status: 400 });
     }
+
+    // Plates require exactly N sides chosen from the Sides menu.
+    let note: string | undefined;
+    if (item.includedSides) {
+      const sideIds = Array.isArray(line.sides) ? line.sides.map(Number) : [];
+      if (sideIds.length !== item.includedSides) {
+        return new Response(`Please choose ${item.includedSides} sides for ${item.title}`, { status: 400 });
+      }
+      const sideNames: string[] = [];
+      for (const sid of sideIds) {
+        const side = getMenuItem(sid);
+        if (!side || side.category !== "Sides") {
+          return new Response("Invalid side selection", { status: 400 });
+        }
+        sideNames.push(side.title);
+      }
+      note = `Sides: ${sideNames.join(", ")}`;
+    }
+
     lineItems.push({
       name: item.title,
       quantity: String(qty),
       basePriceMoney: { amount: BigInt(Math.round(item.price * 100)), currency: "USD" as const },
+      ...(note ? { note } : {}),
     });
   }
 

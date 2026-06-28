@@ -10,12 +10,13 @@ export type MenuItem = {
   price: number; // US dollars
   image: string;
   category: MenuCategory;
+  includedSides?: number; // BBQ plates come with N sides the customer chooses
 };
 
 export const menuItems: MenuItem[] = [
-  { id: 1, title: "Brisket Plate", description: "Slow-smoked beef brisket with two sides of your choice", price: 20, image: "/pictures/food/ribs.png", category: "BBQ Plates" },
-  { id: 2, title: "Ribs Plate", description: "Fall-off-the-bone ribs with two sides", price: 20, image: "/pictures/food/ribs.png", category: "BBQ Plates" },
-  { id: 3, title: "Pulled Pork Plate", description: "Tender pulled pork with two sides", price: 15, image: "/pictures/food/pulled-pork-transparent.png", category: "BBQ Plates" },
+  { id: 1, title: "Brisket Plate", description: "Slow-smoked beef brisket with two sides of your choice", price: 20, image: "/pictures/food/ribs.png", category: "BBQ Plates", includedSides: 2 },
+  { id: 2, title: "Ribs Plate", description: "Fall-off-the-bone ribs with two sides", price: 20, image: "/pictures/food/ribs.png", category: "BBQ Plates", includedSides: 2 },
+  { id: 3, title: "Pulled Pork Plate", description: "Tender pulled pork with two sides", price: 15, image: "/pictures/food/pulled-pork-transparent.png", category: "BBQ Plates", includedSides: 2 },
   { id: 4, title: "Smoked German Potatoes", description: "Creamy potatoes with a smoky finish", price: 5, image: "/pictures/food/german-potatoes-transparent.png", category: "Sides" },
   { id: 5, title: "Smoked Baked Beans", description: "Sweet and savory beans with bacon", price: 5, image: "/pictures/food/ribs.png", category: "Sides" },
   { id: 6, title: "Coleslaw", description: "Fresh and tangy cabbage slaw", price: 4, image: "/pictures/food/ribs.png", category: "Sides" },

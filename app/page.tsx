@@ -2,17 +2,12 @@ import Header from "./components/Header";
 import LogoOverlay from "./components/LogoOverlay";
 import Carousel from "./components/Carousel";
 import FindTheSmoke from "./components/FindTheSmoke";
-import MenuWrapper from "./components/MenuWrapper";
+import MenuPreview from "./components/MenuPreview";
 import CustomSmokers from "./components/CustomSmokers";
 import Footer from "./components/Footer";
-import { CartProvider } from "./components/cart/CartContext";
-import CartWidget from "./components/cart/CartWidget";
-// BIKE WEEK - uncomment for next bike week
-// import BikeWeekModal from "./components/BikeWeekModal";
 
 export default function Home() {
   return (
-    <CartProvider>
     <div className="min-h-screen bg-black text-white">
       {/* Primary SEO heading — one H1 per page, keyword + location. Visually hidden
           so it doesn't alter the hero design. */}
@@ -25,11 +20,9 @@ export default function Home() {
       <LogoOverlay />
       <Carousel />
       <FindTheSmoke />
-      <MenuWrapper />
+      <MenuPreview />
       <CustomSmokers />
       <Footer />
-      <CartWidget />
     </div>
-    </CartProvider>
   );
 }

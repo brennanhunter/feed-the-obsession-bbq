@@ -2,8 +2,6 @@ import type { Metadata } from "next";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import MenuWrapper from "../components/MenuWrapper";
-import { CartProvider } from "../components/cart/CartContext";
-import CartWidget from "../components/cart/CartWidget";
 
 export const metadata: Metadata = {
   title: "Menu",
@@ -21,15 +19,12 @@ export const metadata: Metadata = {
 
 export default function MenuPage() {
   return (
-    <CartProvider>
-      <div className="min-h-screen bg-black text-white">
-        <Header />
-        <main>
-          <MenuWrapper />
-        </main>
-        <Footer />
-        <CartWidget />
-      </div>
-    </CartProvider>
+    <div className="min-h-screen bg-black text-white">
+      <Header />
+      <main>
+        <MenuWrapper />
+      </main>
+      <Footer />
+    </div>
   );
 }

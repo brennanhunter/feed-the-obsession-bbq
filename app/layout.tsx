@@ -4,6 +4,8 @@ import "./globals.css";
 import { Analytics } from "@vercel/analytics/next";
 import { business } from "@/lib/business";
 import StructuredData from "./components/StructuredData";
+import { CartProvider } from "./components/cart/CartContext";
+import CartWidget from "./components/cart/CartWidget";
 
 const alfaSlab = Alfa_Slab_One({
   variable: "--font-alfa",
@@ -104,7 +106,10 @@ export default function RootLayout({
         className={`${barlow.variable} ${alfaSlab.variable} ${metalMania.variable} antialiased font-sans`}
       >
         <StructuredData />
-        {children}
+        <CartProvider>
+          {children}
+          <CartWidget />
+        </CartProvider>
         <Analytics />
       </body>
     </html>
