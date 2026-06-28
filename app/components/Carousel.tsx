@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import Slider from "react-slick";
 import { motion } from "framer-motion";
 import "slick-carousel/slick/slick.css";
@@ -55,21 +56,21 @@ export default function Carousel() {
               transition={{ duration: 0.2 }}
               className="cursor-pointer group"
             >
-              <h1 className="text-6xl font-display tracking-wider text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)] relative overflow-hidden">
+              <h2 className="text-6xl font-display tracking-wider text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)] relative overflow-hidden">
                 <span className="relative z-10 group-hover:text-brand-primary transition-colors duration-300">
                   FEED THE OBSESSION
                 </span>
                 <span className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/40 to-transparent pointer-events-none"></span>
-              </h1>
+              </h2>
               <p className="text-sm sm:w-2/3 w-full mt-6 text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
                 Veteran owned BBQ serving authentic wood-smoked meats. Giant smokers, 
                 high quality ingredients, and a passion for great BBQ.
               </p>
-              <a href="/coming-soon">
+              <Link href="/menu">
                 <button className="text-white px-[30px] py-[8px] rounded-3xl bg-brand-primary cursor-pointer hover:bg-brand-primary hover:scale-105 transition-all mt-6">
                   Order Now
                 </button>
-              </a>
+              </Link>
             </motion.div>
           </div>
         </div>
@@ -98,33 +99,21 @@ export default function Carousel() {
               transition={{ duration: 0.2 }}
               className="cursor-pointer group"
             >
-              <h1 className="text-6xl font-display tracking-wider text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)] relative overflow-hidden">
+              <h2 className="text-6xl font-display tracking-wider text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)] relative overflow-hidden">
                 <span className="relative z-10 group-hover:text-brand-primary transition-colors duration-300">
                   WOOD SMOKED BBQ
                 </span>
                 <span className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/40 to-transparent pointer-events-none"></span>
-              </h1>
+              </h2>
               <p className="text-sm sm:w-2/3 w-full mt-6 text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
                 Giant smokers. Authentic technique. From brisket to ribs, pulled pork to smoked chicken.
                 Every plate comes with two sides.
               </p>
-              <a href="#menu" onClick={(e) => {
-                e.preventDefault();
-                const menuElement = document.getElementById('menu');
-                if (menuElement) {
-                  menuElement.scrollIntoView({ behavior: 'smooth' });
-                }
-                setTimeout(() => {
-                  const bbqButton = document.querySelector('[data-category="BBQ Plates"]') as HTMLButtonElement;
-                  if (bbqButton) {
-                    bbqButton.click();
-                  }
-                }, 500);
-              }}>
+              <Link href="/menu">
                 <button className="text-white px-[30px] py-[8px] rounded-3xl bg-brand-primary cursor-pointer hover:bg-brand-primary hover:scale-105 transition-all mt-6">
                   See Menu
                 </button>
-              </a>
+              </Link>
             </motion.div>
           </div>
         </div>
@@ -156,33 +145,21 @@ export default function Carousel() {
               transition={{ duration: 0.2 }}
               className="cursor-pointer group"
             >
-              <h1 className="text-6xl font-display tracking-wider text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)] relative overflow-hidden">
+              <h2 className="text-6xl font-display tracking-wider text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)] relative overflow-hidden">
                 <span className="relative z-10 group-hover:text-brand-primary transition-colors duration-300">
                   AUTHENTIC PREP WORK
                 </span>
                 <span className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/40 to-transparent pointer-events-none"></span>
-              </h1>
+              </h2>
               <p className="text-sm sm:w-2/3 w-full mt-6 text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
                 Watch our process. Every brisket is carefully trimmed and prepped 
                 before hitting the smoker for that perfect bark and tenderness.
               </p>
-              <a href="#menu" onClick={(e) => {
-                e.preventDefault();
-                const menuElement = document.getElementById('menu');
-                if (menuElement) {
-                  menuElement.scrollIntoView({ behavior: 'smooth' });
-                }
-                setTimeout(() => {
-                  const bbqButton = document.querySelector('[data-category="BBQ Plates"]') as HTMLButtonElement;
-                  if (bbqButton) {
-                    bbqButton.click();
-                  }
-                }, 500);
-              }}>
+              <Link href="/menu">
                 <button className="text-white px-[30px] py-[8px] rounded-3xl bg-brand-primary cursor-pointer hover:bg-brand-primary hover:scale-105 transition-all mt-6">
                   See Our Menu
                 </button>
-              </a>
+              </Link>
             </motion.div>
           </div>
         </div>

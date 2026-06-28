@@ -32,11 +32,13 @@ export default function FindTheSmoke() {
             href={business.maps.directions}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-3 text-2xl font-bold mb-8 hover:text-brand-primary transition-all"
+            className="inline-flex items-center gap-3 text-2xl font-bold mb-3 hover:text-brand-primary transition-all"
           >
             <FaMapMarkerAlt className="text-brand-primary text-2xl" />
             {business.address.street}, {business.address.city}, {business.address.state} {business.address.zip}
           </a>
+
+          <p className="text-xl text-brand-primary font-bold mb-8">{business.hoursDisplay}</p>
 
           {/* Primary actions */}
           <div className="flex flex-wrap gap-4 justify-center mb-8">

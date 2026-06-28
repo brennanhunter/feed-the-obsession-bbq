@@ -73,6 +73,7 @@ export default function Footer() {
                 <FaMapMarkerAlt className="text-brand-primary" />
                 <span>{business.address.street}, {business.address.city}, {business.address.state} {business.address.zip}</span>
               </a>
+              <p className="text-brand-primary font-semibold">{business.hoursDisplay}</p>
               <a
                 href={business.maps.directions}
                 target="_blank"

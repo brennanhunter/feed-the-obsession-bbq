@@ -1,4 +1,4 @@
-// Single source of truth for business info (address, contact, Google links).
+// Single source of truth for business info (address, contact, Google links, SEO).
 // Imported anywhere via `@/lib/business`.
 
 const ADDRESS_FULL = "1204 E New York Ave, DeLand, FL 32724";
@@ -7,6 +7,9 @@ const nameAndAddress = encodeURIComponent(`Feed The Obsession Barbecue, ${ADDRES
 
 export const business = {
   name: "Feed The Obsession BBQ",
+  // Canonical production origin (no trailing slash). Update if the domain changes.
+  url: "https://feedtheobsessionbbq.com",
+  tagline: "Veteran-Owned Wood-Smoked BBQ in DeLand, FL",
 
   phone: "812-205-0559",
   phoneHref: "tel:812-205-0559",
@@ -18,8 +21,24 @@ export const business = {
     city: "DeLand",
     state: "FL",
     zip: "32724",
+    country: "US",
     full: ADDRESS_FULL,
   },
+
+  // SEO / structured-data attributes
+  priceRange: "$$",
+  cuisine: ["Barbecue", "American", "Southern"],
+  // Areas you want to rank for / serve (used in structured data).
+  areaServed: ["DeLand", "Orange City", "DeBary", "Deltona", "Lake Helen", "Volusia County"],
+  // Open daily 12 PM – 8 PM. (If you're closed any day, tell us and we'll split this out.)
+  hours: [
+    {
+      days: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+      opens: "12:00",
+      closes: "20:00",
+    },
+  ] as { days: string[]; opens: string; closes: string }[],
+  hoursDisplay: "Open Daily · 12–8 PM",
 
   maps: {
     // Turn-by-turn directions to the shop.

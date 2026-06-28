@@ -3,96 +3,16 @@
 import Image from "next/image";
 import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
+import { menuItems } from "@/lib/menu";
+import { useCart } from "./cart/CartContext";
 
 const categories = ["BBQ Plates", "Sides", "Catering"];
-
-const menuItems = [
-  {
-    id: 1,
-    title: "Brisket Plate",
-    description: "Slow-smoked beef brisket with two sides of your choice",
-    price: 20,
-    image: "/pictures/food/ribs.png",
-    category: "BBQ Plates"
-  },
-  {
-    id: 2,
-    title: "Ribs Plate",
-    description: "Fall-off-the-bone ribs with two sides",
-    price: 20,
-    image: "/pictures/food/ribs.png",
-    category: "BBQ Plates"
-  },
-  {
-    id: 3,
-    title: "Pulled Pork Plate",
-    description: "Tender pulled pork with two sides",
-    price: 15,
-    image: "/pictures/food/pulled-pork-transparent.png",
-    category: "BBQ Plates"
-  },
-  {
-    id: 4,
-    title: "Smoked German Potatoes",
-    description: "Creamy potatoes with a smoky finish",
-    price: 5,
-    image: "/pictures/food/german-potatoes-transparent.png",
-    category: "Sides"
-  },
-  {
-    id: 5,
-    title: "Smoked Baked Beans",
-    description: "Sweet and savory beans with bacon",
-    price: 5,
-    image: "/pictures/food/ribs.png",
-    category: "Sides"
-  },
-  {
-    id: 6,
-    title: "Coleslaw",
-    description: "Fresh and tangy cabbage slaw",
-    price: 4,
-    image: "/pictures/food/ribs.png",
-    category: "Sides"
-  },
-  {
-    id: 7,
-    title: "Black Eyed Peas",
-    description: "Southern-style black eyed peas",
-    price: 5,
-    image: "/pictures/food/ribs.png",
-    category: "Sides"
-  },
-  {
-    id: 8,
-    title: "Cabbage and Ham",
-    description: "Tender cabbage with smoked ham",
-    price: 5,
-    image: "/pictures/food/ribs.png",
-    category: "Sides"
-  },
-  {
-    id: 9,
-    title: "Corn Salad",
-    description: "Sweet corn with fresh vegetables",
-    price: 4,
-    image: "/pictures/food/ribs.png",
-    category: "Sides"
-  },
-  {
-    id: 10,
-    title: "Cucumber Salad",
-    description: "Fresh cucumber salad with herbs",
-    price: 4,
-    image: "/pictures/food/cucumber-transparent.png",
-    category: "Sides"
-  },
-];
 
 export default function MenuWrapper() {
   const [active, setActive] = useState(0);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [videoOpacity, setVideoOpacity] = useState(1);
+  const { add } = useCart();
 
   useEffect(() => {
     const handleShowCatering = () => {
@@ -268,7 +188,11 @@ export default function MenuWrapper() {
                 <p className="text-[15px] text-white/70">{item.description}</p>
                 <div className="flex justify-between items-center mt-4">
                   <span className="text-xl font-bold">${item.price}</span>
-                  <button className="w-10 h-10 rounded-full bg-brand-primary grid place-content-center hover:opacity-70 transition-all">
+                  <button
+                    onClick={() => add({ id: item.id, title: item.title, price: item.price })}
+                    aria-label={`Add ${item.title} to order`}
+                    className="w-10 h-10 rounded-full bg-brand-primary grid place-content-center hover:opacity-70 transition-all cursor-pointer"
+                  >
                     <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                       <path d="M3 1a1 1 0 000 2h1.22l.305 1.222a.997.997 0 00.01.042l1.358 5.43-.893.892C3.74 11.846 4.632 14 6.414 14H15a1 1 0 000-2H6.414l1-1H14a1 1 0 00.894-.553l3-6A1 1 0 0017 3H6.28l-.31-1.243A1 1 0 005 1H3zM16 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM6.5 18a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" />
                     </svg>

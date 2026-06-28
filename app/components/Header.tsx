@@ -1,17 +1,24 @@
 "use client";
 
 import Link from "next/link";
+import Logo from "./Logo";
 import { useState } from "react";
 
-export default function Header() {
+export default function Header({ overlayLogo = false }: { overlayLogo?: boolean }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
     <header className="h-[5.5rem] sticky top-0 z-50 w-full bg-brand-secondary">
       <div className="container mx-auto text-white flex justify-between items-center h-full px-6">
-        {/* Logo lives in <LogoOverlay /> (app/page.tsx) so its blend can react to the
-            carousel behind it. This spacer just reserves its slot so the nav stays put. */}
-        <div aria-hidden className="w-[8.6rem]" />
+        {/* Home shows the big adaptive logo via <LogoOverlay/> (it overflows the header),
+            so there we just reserve its slot. Every other page gets a normal header logo. */}
+        {overlayLogo ? (
+          <div aria-hidden className="w-[8.6rem]" />
+        ) : (
+          <Link href="/" className="cursor-pointer hover:opacity-80 transition-opacity">
+            <Logo className="h-14 aspect-[2718/2896] text-white" />
+          </Link>
+        )}
 
         {/* Desktop Navigation */}
         <nav className="sm:flex hidden">
