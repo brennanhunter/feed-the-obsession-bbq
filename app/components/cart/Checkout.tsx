@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import Script from "next/script";
 import { useCart } from "./CartContext";
+import { business } from "@/lib/business";
 
 const APP_ID = process.env.NEXT_PUBLIC_SQUARE_APPLICATION_ID;
 const LOCATION_ID = process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID;
@@ -37,6 +38,7 @@ export default function Checkout({ onDone }: { onDone?: () => void }) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const cardRef = useRef<any>(null);
 
+  // Online ordering is "live" only once Square keys are present.
   const configured = Boolean(APP_ID && LOCATION_ID);
 
   async function initSquare() {
@@ -103,6 +105,27 @@ export default function Checkout({ onDone }: { onDone?: () => void }) {
     );
   }
 
+  // Online ordering not live yet → friendly coming-soon + call to order.
+  if (!configured) {
+    return (
+      <div className="text-center py-4 text-white">
+        <p className="text-2xl font-display tracking-wider text-brand-primary mb-2">
+          Online Ordering Coming Soon
+        </p>
+        <p className="text-white/70 mb-5">
+          We&apos;re firing up online checkout. For now, give us a call and we&apos;ll get your
+          order on the smoker.
+        </p>
+        <a
+          href={business.phoneHref}
+          className="flex items-center justify-center gap-2 w-full py-3 rounded-full bg-brand-primary font-bold hover:opacity-80 transition-all"
+        >
+          📞 Call to Order — {business.phone}
+        </a>
+      </div>
+    );
+  }
+
   return (
     <div className="text-white">
       <Script
@@ -153,26 +176,20 @@ export default function Checkout({ onDone }: { onDone?: () => void }) {
         className="w-full mb-3 p-2 rounded bg-black/40 border border-white/20"
       />
 
-      {configured ? (
-        // Square injects the secure card fields here (PAN never touches our server).
-        <div id="card-container" className="mb-4 p-3 rounded bg-white" />
-      ) : (
-        <p className="mb-4 text-sm text-yellow-400">
-          Card form will appear once Square keys are added to <code>.env.local</code>
-          {" "}(NEXT_PUBLIC_SQUARE_APPLICATION_ID + LOCATION_ID), then restart the dev server.
-        </p>
-      )}
+      {/* Square injects the secure card fields here (PAN never touches our server). */}
+      <div id="card-container" className="mb-4 p-3 rounded bg-white" />
 
       {error && <p className="mb-3 text-red-400 text-sm">{error}</p>}
 
       <button
         type="button"
         onClick={pay}
-        disabled={status === "paying" || items.length === 0 || !configured}
+        disabled={status === "paying" || items.length === 0}
         className="w-full py-3 rounded-full bg-brand-primary font-bold disabled:opacity-50"
       >
         {status === "paying" ? "Processing…" : `Pay $${(totalCents / 100).toFixed(2)}`}
       </button>
+      <p className="mt-3 text-xs text-white/40 text-center">Secure card payment by Square.</p>
     </div>
   );
 }

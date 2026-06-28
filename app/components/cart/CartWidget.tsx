@@ -74,9 +74,6 @@ export default function CartWidget() {
                   <span>${(totalCents / 100).toFixed(2)}</span>
                 </div>
                 <Checkout onDone={() => setOpen(false)} />
-                <p className="mt-3 text-xs text-white/40 text-center">
-                  Pickup &amp; dine-in. Secure card payment by Square.
-                </p>
               </div>
             )}
           </div>
