@@ -30,15 +30,22 @@ export const business = {
   cuisine: ["Barbecue", "American", "Southern"],
   // Areas you want to rank for / serve (used in structured data).
   areaServed: ["DeLand", "Orange City", "DeBary", "Deltona", "Lake Helen", "Volusia County"],
-  // Open daily 12 PM – 8 PM. (If you're closed any day, tell us and we'll split this out.)
+  // Thursday 5–9 PM, Friday 12–9 PM. Closed the rest of the week.
+  // Note: they often stay open later when it's busy — the structured data below
+  // lists the guaranteed hours, since Google treats these as hard closing times.
   hours: [
     {
-      days: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+      days: ["Thursday"],
+      opens: "17:00",
+      closes: "21:00",
+    },
+    {
+      days: ["Friday"],
       opens: "12:00",
-      closes: "20:00",
+      closes: "21:00",
     },
   ] as { days: string[]; opens: string; closes: string }[],
-  hoursDisplay: "Open Daily · 12–8 PM",
+  hoursDisplay: "Thu 5–9 PM · Fri 12–9 PM",
 
   maps: {
     // Turn-by-turn directions to the shop.

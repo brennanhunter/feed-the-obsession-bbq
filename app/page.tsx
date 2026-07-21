@@ -4,6 +4,7 @@ import Carousel from "./components/Carousel";
 import FindTheSmoke from "./components/FindTheSmoke";
 import MenuPreview from "./components/MenuPreview";
 import CustomSmokers from "./components/CustomSmokers";
+import Gallery from "./components/Gallery";
 import Footer from "./components/Footer";
 
 export default function Home() {
@@ -22,6 +23,7 @@ export default function Home() {
       <FindTheSmoke />
       <MenuPreview />
       <CustomSmokers />
+      <Gallery />
       <Footer />
     </div>
   );
