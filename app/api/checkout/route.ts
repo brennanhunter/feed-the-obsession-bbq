@@ -1,6 +1,9 @@
 import { randomUUID } from "node:crypto";
 import { square, LOCATION_ID } from "@/lib/square";
 import { getMenuMap } from "@/lib/catalog";
+import { sendEmail } from "@/lib/mailer";
+import { orderConfirmationEmail, type OrderEmailLine } from "@/lib/order-email";
+import { business } from "@/lib/business";
 
 // Browser sends only Square catalog ids + quantities. The server validates each
 // id against the live McSorleys menu and lets Square price the order from the
@@ -13,7 +16,10 @@ type Body = {
   table?: string;
   name: string;
   phone: string;
+  email: string;
 };
+
+const emailOk = (e: string) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e);
 
 export async function POST(req: Request) {
   let body: Body;
@@ -28,21 +34,25 @@ export async function POST(req: Request) {
     return new Response("Your cart is empty", { status: 400 });
   if (!body.name?.trim() || !body.phone?.trim())
     return new Response("Name and phone are required", { status: 400 });
+  if (!body.email?.trim() || !emailOk(body.email.trim()))
+    return new Response("A valid email is required for your confirmation", { status: 400 });
+
+  const email = body.email.trim();
 
   // Validate every cart line against the live menu, then reference the catalog
-  // object so Square applies the correct price and any configured tax.
+  // object so Square applies the correct price and any configured tax. We also
+  // capture titles/prices here to build the confirmation email.
   const menu = await getMenuMap();
   const lineItems = [];
+  const emailLines: OrderEmailLine[] = [];
   for (const line of body.items) {
     const item = menu.get(String(line.id));
     const qty = Math.floor(Number(line.quantity));
     if (!item || !Number.isFinite(qty) || qty < 1) {
       return new Response("Invalid item in cart", { status: 400 });
     }
-    lineItems.push({
-      catalogObjectId: item.id, // ITEM_VARIATION id → Square prices & taxes it
-      quantity: String(qty),
-    });
+    lineItems.push({ catalogObjectId: item.id, quantity: String(qty) });
+    emailLines.push({ title: item.title, qty, price: item.price });
   }
 
   const note =
@@ -52,7 +62,6 @@ export async function POST(req: Request) {
 
   try {
     // 1) Create the order with a PICKUP fulfillment (how it reaches the kitchen).
-    //    Dine-in is modeled as a tagged pickup (Square has no DINE_IN type).
     const orderRes = await square.orders.create({
       idempotencyKey: randomUUID(),
       order: {
@@ -63,7 +72,11 @@ export async function POST(req: Request) {
             type: "PICKUP",
             state: "PROPOSED",
             pickupDetails: {
-              recipient: { displayName: body.name.trim(), phoneNumber: body.phone.trim() },
+              recipient: {
+                displayName: body.name.trim(),
+                phoneNumber: body.phone.trim(),
+                emailAddress: email,
+              },
               scheduleType: "ASAP",
               note,
             },
@@ -84,15 +97,25 @@ export async function POST(req: Request) {
     }
 
     // 2) Charge the card for Square's computed total and apply it to the order.
-    //    Order now has a fulfillment AND is paid → it appears live in the kitchen.
     await square.payments.create({
       idempotencyKey: randomUUID(),
       sourceId: body.sourceId,
       orderId,
       locationId: LOCATION_ID,
       amountMoney: { amount, currency: "USD" },
+      buyerEmailAddress: email, // Square records it (and can send its own receipt)
       autocomplete: true,
     });
+
+    // 3) Send our branded confirmation. Never fail the order if the email hiccups.
+    const { subject, html } = orderConfirmationEmail({
+      name: body.name.trim(),
+      items: emailLines,
+      totalCents: Number(amount),
+      channel: body.channel,
+      table: body.table?.trim(),
+    });
+    await sendEmail({ to: email, subject, html, replyTo: business.email });
 
     return Response.json({ ok: true, orderId });
   } catch (err: unknown) {

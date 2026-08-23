@@ -33,6 +33,7 @@ export default function Checkout({ onDone }: { onDone?: () => void }) {
   const [table, setTable] = useState("");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "paying" | "done" | "error">("idle");
   const [error, setError] = useState("");
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -59,8 +60,12 @@ export default function Checkout({ onDone }: { onDone?: () => void }) {
   async function pay() {
     setError("");
     if (!cardRef.current || items.length === 0) return;
-    if (!name.trim() || !phone.trim()) {
-      setError("Please add your name and phone.");
+    if (!name.trim() || !phone.trim() || !email.trim()) {
+      setError("Please add your name, phone, and email.");
+      return;
+    }
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim())) {
+      setError("Please enter a valid email for your confirmation.");
       return;
     }
     if (channel === "DINE_IN" && !table.trim()) {
@@ -82,6 +87,7 @@ export default function Checkout({ onDone }: { onDone?: () => void }) {
           table: channel === "DINE_IN" ? table.trim() : undefined,
           name: name.trim(),
           phone: phone.trim(),
+          email: email.trim(),
         }),
       });
       if (!res.ok) throw new Error((await res.text()) || "Payment failed.");
@@ -98,7 +104,7 @@ export default function Checkout({ onDone }: { onDone?: () => void }) {
     return (
       <div className="text-center py-8">
         <p className="text-2xl text-green-400 font-bold mb-2">Order placed! 🍖</p>
-        <p className="text-white/70">We&apos;ll get it on the smoker. See you soon!</p>
+        <p className="text-white/70">We&apos;ll get it on the smoker — a confirmation is on its way to your email. See you soon!</p>
         {onDone && (
           <button onClick={onDone} className="mt-6 px-6 py-2 rounded-full bg-brand-primary">
             Close
@@ -176,6 +182,13 @@ export default function Checkout({ onDone }: { onDone?: () => void }) {
         placeholder="Phone"
         value={phone}
         onChange={(e) => setPhone(e.target.value)}
+        className="w-full mb-3 p-2 rounded bg-black/40 border border-white/20"
+      />
+      <input
+        type="email"
+        placeholder="Email (for your confirmation)"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
         className="w-full mb-3 p-2 rounded bg-black/40 border border-white/20"
       />
 
