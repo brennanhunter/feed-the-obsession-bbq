@@ -4,6 +4,7 @@ import { getMenuMap } from "@/lib/catalog";
 import { sendEmail } from "@/lib/mailer";
 import { orderConfirmationEmail, type OrderEmailLine } from "@/lib/order-email";
 import { orderNotifyEmail } from "@/lib/order-notify";
+import { formatPickupLabel } from "@/lib/hours";
 import { business } from "@/lib/business";
 
 // Browser sends only Square catalog ids + quantities. The server validates each
@@ -18,6 +19,7 @@ type Body = {
   name: string;
   phone: string;
   email: string;
+  pickupAt?: string; // ISO; when set, this is a SCHEDULED pickup
 };
 
 const emailOk = (e: string) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e);
@@ -56,10 +58,25 @@ export async function POST(req: Request) {
     emailLines.push({ title: item.title, qty, price: item.price });
   }
 
-  const note =
+  // Scheduled pickup (required when ordering outside hours; optional otherwise).
+  let scheduleType: "ASAP" | "SCHEDULED" = "ASAP";
+  let pickupAt: string | undefined;
+  if (body.pickupAt) {
+    const d = new Date(body.pickupAt);
+    const ms = d.getTime();
+    if (isNaN(ms) || ms < Date.now() - 60_000 || ms > Date.now() + 8 * 86_400_000) {
+      return new Response("Please choose a valid pickup time", { status: 400 });
+    }
+    scheduleType = "SCHEDULED";
+    pickupAt = d.toISOString();
+  }
+  const pickupLabel = pickupAt ? formatPickupLabel(pickupAt) : "ASAP";
+
+  const channelNote =
     body.channel === "DINE_IN"
       ? `DINE-IN · Table ${body.table?.trim() || "?"}`
       : "TAKE-OUT";
+  const note = `${channelNote} · Pickup: ${pickupLabel}`;
 
   try {
     // 1) Create the order with a PICKUP fulfillment (how it reaches the kitchen).
@@ -78,7 +95,8 @@ export async function POST(req: Request) {
                 phoneNumber: body.phone.trim(),
                 emailAddress: email,
               },
-              scheduleType: "ASAP",
+              scheduleType,
+              ...(pickupAt ? { pickupAt } : {}),
               note,
             },
           },
@@ -115,6 +133,7 @@ export async function POST(req: Request) {
       totalCents: Number(amount),
       channel: body.channel,
       table: body.table?.trim(),
+      pickup: pickupLabel,
     });
     await sendEmail({ to: email, subject, html, replyTo: business.email });
 
@@ -132,6 +151,7 @@ export async function POST(req: Request) {
       totalCents: Number(amount),
       channel: body.channel,
       table: body.table?.trim(),
+      pickup: pickupLabel,
     });
     await sendEmail({ to: notifyTo, subject: notify.subject, html: notify.html, replyTo: email });
 

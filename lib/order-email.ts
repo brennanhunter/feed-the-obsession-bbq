@@ -18,8 +18,9 @@ export function orderConfirmationEmail(opts: {
   totalCents: number;
   channel: "DINE_IN" | "TAKE_OUT";
   table?: string;
+  pickup?: string; // "ASAP" or a scheduled-time label
 }): { subject: string; html: string } {
-  const { name, items, totalCents, channel, table } = opts;
+  const { name, items, totalCents, channel, table, pickup } = opts;
   const fulfillment =
     channel === "DINE_IN" ? `Dine-in${table ? ` · Table ${esc(table)}` : ""}` : "Take-out (pickup)";
   const logo = `${business.url}/logo-red.png`;
@@ -83,6 +84,7 @@ export function orderConfirmationEmail(opts: {
         <div style="background:#ece4d3;border-left:4px solid ${RED};padding:14px 16px;margin:24px 0">
           <div style="color:#8a8069;font-size:11px;letter-spacing:1px;text-transform:uppercase;margin-bottom:3px">Fulfillment</div>
           <div style="color:${INK};font-size:16px;font-weight:bold">${fulfillment}</div>
+          <div style="color:${INK};font-size:15px;margin-top:6px"><strong>Pickup:</strong> ${esc(pickup || "ASAP")}</div>
         </div>
 
         <p style="margin:0 0 4px;color:${INK};font-size:15px;line-height:1.6"><strong>Pickup:</strong> ${esc(business.address.full)}</p>

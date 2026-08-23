@@ -15,8 +15,9 @@ export function orderNotifyEmail(opts: {
   totalCents: number;
   channel: "DINE_IN" | "TAKE_OUT";
   table?: string;
+  pickup?: string;
 }): { subject: string; html: string } {
-  const { orderId, name, email, phone, items, totalCents, channel, table } = opts;
+  const { orderId, name, email, phone, items, totalCents, channel, table, pickup } = opts;
   const total = totalCents / 100;
   const fulfillment =
     channel === "DINE_IN" ? `Dine-in${table ? ` · Table ${esc(table)}` : ""}` : "Take-out";
@@ -37,7 +38,7 @@ export function orderNotifyEmail(opts: {
   const html = `
   <div style="font-family:Arial,Helvetica,sans-serif;color:#111;max-width:520px">
     <h2 style="margin:0 0 4px">New online order — ${money(total)}</h2>
-    <p style="margin:0 0 16px;color:#666;font-size:13px">${esc(when)} ET · ${fulfillment} · Order ${esc(orderId)}</p>
+    <p style="margin:0 0 16px;color:#666;font-size:13px">${esc(when)} ET · ${fulfillment} · Pickup: ${esc(pickup || "ASAP")} · Order ${esc(orderId)}</p>
 
     <table style="width:100%;border-collapse:collapse;font-size:14px;margin-bottom:12px">
       ${rows}

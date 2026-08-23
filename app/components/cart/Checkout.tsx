@@ -4,7 +4,7 @@ import { useRef, useState, useEffect } from "react";
 import Script from "next/script";
 import { useCart } from "./CartContext";
 import { business } from "@/lib/business";
-import { getOpenStatus } from "@/lib/hours";
+import { getOpenStatus, getPickupOptions, type PickupOption } from "@/lib/hours";
 
 const APP_ID = process.env.NEXT_PUBLIC_SQUARE_APPLICATION_ID;
 const LOCATION_ID = process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID;
@@ -39,7 +39,14 @@ export default function Checkout({ onDone }: { onDone?: () => void }) {
   const [error, setError] = useState("");
   // Open/closed status — computed client-side (Eastern time) to avoid SSR mismatch.
   const [openStatus, setOpenStatus] = useState<{ open: boolean; label: string } | null>(null);
-  useEffect(() => setOpenStatus(getOpenStatus()), []);
+  const [pickupOpts, setPickupOpts] = useState<{ asap: boolean; slots: PickupOption[] } | null>(null);
+  const [pickup, setPickup] = useState<string>("asap"); // "asap" or a slot ISO
+  useEffect(() => {
+    setOpenStatus(getOpenStatus());
+    const opts = getPickupOptions();
+    setPickupOpts(opts);
+    setPickup(opts.asap ? "asap" : opts.slots[0]?.iso ?? "");
+  }, []);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const cardRef = useRef<any>(null);
   const initStarted = useRef(false); // reserve synchronously so the form attaches once
@@ -76,6 +83,10 @@ export default function Checkout({ onDone }: { onDone?: () => void }) {
       setError("Please enter your table number.");
       return;
     }
+    if (!pickup) {
+      setError("Please choose a pickup time.");
+      return;
+    }
     setStatus("paying");
     try {
       const result = await cardRef.current.tokenize();
@@ -92,6 +103,7 @@ export default function Checkout({ onDone }: { onDone?: () => void }) {
           name: name.trim(),
           phone: phone.trim(),
           email: email.trim(),
+          pickupAt: pickup === "asap" ? undefined : pickup,
         }),
       });
       if (!res.ok) throw new Error((await res.text()) || "Payment failed.");
@@ -166,6 +178,33 @@ export default function Checkout({ onDone }: { onDone?: () => void }) {
         <p className="text-white/70">📍 Pickup at {business.address.full}</p>
         <p className="text-white/70">✉️ Email confirmation sent instantly</p>
       </div>
+
+      {/* Pickup time — scheduling is required when we're closed */}
+      {pickupOpts && (
+        <div className="mb-4">
+          <label className="block text-sm mb-1.5">
+            {pickupOpts.asap ? (
+              <span className="text-white/70">Pickup time</span>
+            ) : (
+              <span className="text-brand-primary font-semibold">
+                We&apos;re closed right now — schedule a pickup time
+              </span>
+            )}
+          </label>
+          <select
+            value={pickup}
+            onChange={(e) => setPickup(e.target.value)}
+            className="w-full p-3 rounded bg-black/40 border border-white/20 text-white focus:outline-none focus:border-brand-primary"
+          >
+            {pickupOpts.asap && <option value="asap">ASAP — ready in ~20 min</option>}
+            {pickupOpts.slots.map((s) => (
+              <option key={s.iso} value={s.iso}>
+                {s.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       {/* Dine-in vs Take-out */}
       <div className="flex gap-3 mb-4">
