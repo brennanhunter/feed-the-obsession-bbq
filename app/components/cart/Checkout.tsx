@@ -1,9 +1,10 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import Script from "next/script";
 import { useCart } from "./CartContext";
 import { business } from "@/lib/business";
+import { getOpenStatus } from "@/lib/hours";
 
 const APP_ID = process.env.NEXT_PUBLIC_SQUARE_APPLICATION_ID;
 const LOCATION_ID = process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID;
@@ -36,6 +37,9 @@ export default function Checkout({ onDone }: { onDone?: () => void }) {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "paying" | "done" | "error">("idle");
   const [error, setError] = useState("");
+  // Open/closed status — computed client-side (Eastern time) to avoid SSR mismatch.
+  const [openStatus, setOpenStatus] = useState<{ open: boolean; label: string } | null>(null);
+  useEffect(() => setOpenStatus(getOpenStatus()), []);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const cardRef = useRef<any>(null);
   const initStarted = useRef(false); // reserve synchronously so the form attaches once
@@ -147,6 +151,21 @@ export default function Checkout({ onDone }: { onDone?: () => void }) {
           void initSquare();
         }}
       />
+
+      {/* Confidence cues */}
+      <div className="mb-4 rounded-xl bg-black/40 border border-white/10 p-3.5 text-sm space-y-1.5">
+        {openStatus && (
+          <p className="flex items-center gap-2">
+            <span className={openStatus.open ? "text-green-400" : "text-white/50"}>●</span>
+            <span className={openStatus.open ? "text-green-400 font-semibold" : "text-white/70"}>
+              {openStatus.label}
+            </span>
+          </p>
+        )}
+        <p className="text-white/70">⏱️ Most orders ready in ~15–20 min</p>
+        <p className="text-white/70">📍 Pickup at {business.address.full}</p>
+        <p className="text-white/70">✉️ Email confirmation sent instantly</p>
+      </div>
 
       {/* Dine-in vs Take-out */}
       <div className="flex gap-3 mb-4">

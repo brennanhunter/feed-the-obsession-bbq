@@ -3,6 +3,7 @@ import LogoOverlay from "./components/LogoOverlay";
 import Carousel from "./components/Carousel";
 import FindTheSmoke from "./components/FindTheSmoke";
 import MenuPreview from "./components/MenuPreview";
+import Reviews from "./components/Reviews";
 import CustomSmokers from "./components/CustomSmokers";
 import Gallery from "./components/Gallery";
 import Footer from "./components/Footer";
@@ -26,6 +27,7 @@ export default async function Home() {
       <Carousel />
       <FindTheSmoke />
       <MenuPreview items={menu} />
+      <Reviews />
       <CustomSmokers />
       <Gallery />
       <Footer />

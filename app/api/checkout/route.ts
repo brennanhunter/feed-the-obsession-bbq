@@ -3,6 +3,7 @@ import { square, LOCATION_ID } from "@/lib/square";
 import { getMenuMap } from "@/lib/catalog";
 import { sendEmail } from "@/lib/mailer";
 import { orderConfirmationEmail, type OrderEmailLine } from "@/lib/order-email";
+import { orderNotifyEmail } from "@/lib/order-notify";
 import { business } from "@/lib/business";
 
 // Browser sends only Square catalog ids + quantities. The server validates each
@@ -116,6 +117,23 @@ export async function POST(req: Request) {
       table: body.table?.trim(),
     });
     await sendEmail({ to: email, subject, html, replyTo: business.email });
+
+    // Internal copy for sales/profit tracking.
+    const notifyTo = (process.env.ORDER_NOTIFY_TO ?? "hunter@xtremery.com")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const notify = orderNotifyEmail({
+      orderId,
+      name: body.name.trim(),
+      email,
+      phone: body.phone.trim(),
+      items: emailLines,
+      totalCents: Number(amount),
+      channel: body.channel,
+      table: body.table?.trim(),
+    });
+    await sendEmail({ to: notifyTo, subject: notify.subject, html: notify.html, replyTo: email });
 
     return Response.json({ ok: true, orderId });
   } catch (err: unknown) {

@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { MENU_SECTIONS, type MenuItem, type MenuSection } from "@/lib/catalog";
 import { useCart } from "./cart/CartContext";
+import CateringForm from "./CateringForm";
 
 // Branded-menu section labels (mirrors the printed menu).
 const SECTION_LABEL: Record<MenuSection, string> = {
@@ -86,16 +87,17 @@ export default function MenuWrapper({ items }: { items: MenuItem[] }) {
           <h3 className="font-display text-3xl tracking-wider text-white border-b-2 border-brand-primary pb-2 mb-4 uppercase">
             Catering
           </h3>
-          <p className="text-white/60 mb-4">
+          <p className="text-white/60 mb-2">
             Parties, weddings, corporate events, and special occasions — full-service wood-smoked BBQ.
-            Call for pricing &amp; availability.
           </p>
-          <a
-            href="tel:812-205-0559"
-            className="inline-block font-display text-3xl md:text-4xl text-brand-primary tracking-wider hover:opacity-80 transition-all"
-          >
-            812-205-0559
-          </a>
+          <p className="text-white/60 mb-6">
+            Send us your details below, or call{" "}
+            <a href="tel:812-205-0559" className="text-brand-primary font-semibold hover:opacity-80">
+              812-205-0559
+            </a>
+            .
+          </p>
+          <CateringForm />
         </section>
       </div>
     </div>
