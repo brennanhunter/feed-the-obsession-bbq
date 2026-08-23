@@ -37,18 +37,21 @@ export default function Checkout({ onDone }: { onDone?: () => void }) {
   const [error, setError] = useState("");
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const cardRef = useRef<any>(null);
+  const initStarted = useRef(false); // reserve synchronously so the form attaches once
 
   // Online ordering is "live" only once Square keys are present.
   const configured = Boolean(APP_ID && LOCATION_ID);
 
   async function initSquare() {
-    if (!configured || !window.Square || cardRef.current) return;
+    if (!configured || !window.Square || initStarted.current) return;
+    initStarted.current = true;
     try {
       const payments = window.Square.payments(APP_ID!, LOCATION_ID!);
       const card = await payments.card();
       await card.attach("#card-container");
       cardRef.current = card;
     } catch (e) {
+      initStarted.current = false; // allow a retry on failure
       console.error("Square card init failed:", e);
     }
   }
@@ -74,7 +77,7 @@ export default function Checkout({ onDone }: { onDone?: () => void }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           sourceId: result.token,
-          items: items.map((i) => ({ id: i.id, quantity: i.qty, sides: i.sides?.map((s) => s.id) ?? [] })),
+          items: items.map((i) => ({ id: i.id, quantity: i.qty })),
           channel,
           table: channel === "DINE_IN" ? table.trim() : undefined,
           name: name.trim(),

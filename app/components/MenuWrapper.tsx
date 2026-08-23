@@ -1,242 +1,103 @@
 "use client";
 
-import Image from "next/image";
-import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import { menuItems, type MenuItem } from "@/lib/menu";
+import { MENU_SECTIONS, type MenuItem, type MenuSection } from "@/lib/catalog";
 import { useCart } from "./cart/CartContext";
-import SidePicker from "./cart/SidePicker";
 
-const categories = ["BBQ Plates", "Sides", "Catering"];
-const sideOptions = menuItems.filter((i) => i.category === "Sides");
+// Branded-menu section labels (mirrors the printed menu).
+const SECTION_LABEL: Record<MenuSection, string> = {
+  Plates: "Plates",
+  Combos: "Combos & Racks",
+  "Daily Specials": "The Smoke Schedule",
+  "Whole Cuts": "Whole Cuts & Catering",
+  Sides: "Sides",
+};
 
-export default function MenuWrapper() {
-  const [active, setActive] = useState(0);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const [videoOpacity, setVideoOpacity] = useState(1);
-  const [sidePickerItem, setSidePickerItem] = useState<MenuItem | null>(null);
+const SECTION_NOTE: Partial<Record<MenuSection, string>> = {
+  Plates: "Every plate comes with one side.",
+  "Daily Specials": "One every weekday — $9.99. Follow us for what's on.",
+  "Whole Cuts": "Order a day ahead — call 812-205-0559.",
+};
+
+function ItemRow({ item }: { item: MenuItem }) {
   const { add } = useCart();
-
-  // Deep link: /menu#catering opens the Catering tab.
-  useEffect(() => {
-    if (typeof window !== "undefined" && window.location.hash === "#catering") {
-      setActive(2);
-    }
-  }, []);
-
-  useEffect(() => {
-    const handleShowCatering = () => {
-      console.log('Catering event received!'); // Debug log
-      setActive(2); // Switch to Catering tab
-    };
-    
-    window.addEventListener('showCatering', handleShowCatering);
-    
-    return () => {
-      window.removeEventListener('showCatering', handleShowCatering);
-    };
-  }, []);
-
-  useEffect(() => {
-    // When Catering tab is active, play video with sound
-    if (active === 2 && videoRef.current) {
-      setVideoOpacity(1); // Reset opacity
-      videoRef.current.currentTime = 0; // Reset to start
-      videoRef.current.muted = false;
-      videoRef.current.play().catch(err => {
-        console.log('Video autoplay failed:', err);
-        // If autoplay with sound fails, try with mute
-        videoRef.current!.muted = true;
-        videoRef.current!.play();
-      });
-    }
-  }, [active]);
-
-  const handleTimeUpdate = () => {
-    if (videoRef.current) {
-      const video = videoRef.current;
-      const timeRemaining = video.duration - video.currentTime;
-      
-      // Start fading out 2 seconds before the end
-      if (timeRemaining <= 2 && timeRemaining > 0) {
-        setVideoOpacity(timeRemaining / 2);
-      }
-    }
-  };
-
-  const handleVideoEnded = () => {
-    setVideoOpacity(0);
-    // Scroll to top of menu section
-    const menuElement = document.getElementById('menu');
-    if (menuElement) {
-      menuElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  };
-
-  const filteredItems = menuItems.filter(
-    (item) => item.category === categories[active]
+  return (
+    <div className="py-3 border-b border-white/10">
+      <div className="flex items-baseline gap-3">
+        <span className="font-semibold text-lg text-white shrink-0">{item.title}</span>
+        <span className="flex-1 border-b border-dotted border-white/25 translate-y-[-4px]" />
+        <span className="font-bold text-lg text-brand-primary shrink-0">
+          ${item.price.toFixed(2)}
+        </span>
+        <button
+          onClick={() => add({ id: item.id, title: item.title, price: item.price })}
+          className="shrink-0 px-4 py-1.5 rounded-full bg-brand-primary text-white text-sm font-semibold hover:opacity-80 transition-all"
+          aria-label={`Add ${item.title} to order`}
+        >
+          Add +
+        </button>
+      </div>
+      {item.description && (
+        <p className="mt-1 text-sm text-white/50 pr-24">{item.description}</p>
+      )}
+    </div>
   );
+}
+
+export default function MenuWrapper({ items }: { items: MenuItem[] }) {
+  const sections = MENU_SECTIONS.filter((s) => items.some((i) => i.section === s));
 
   return (
-    <div id="menu" className="container mx-auto mb-16 py-20">
-      <motion.div 
+    <div id="menu" className="container mx-auto max-w-4xl px-4 mb-16 py-20">
+      <motion.div
         initial={{ opacity: 0, y: 30 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, margin: "-100px" }}
         transition={{ duration: 0.6 }}
-        className="flex flex-col items-center w-full"
+        className="flex flex-col items-center w-full text-center mb-12"
       >
         <h2 className="text-[40px] font-display tracking-wider">OUR MENU</h2>
-        <p className="mt-4 text-center text-white/60 max-w-xl">
-          Our menu varies week to week based on what we're smoking. Follow us for weekly updates.
+        <p className="mt-4 text-white/60 max-w-xl">
+          Our menu varies week to week based on what we&apos;re smoking. Follow us for weekly updates.
         </p>
-        <div className="mt-10 flex flex-wrap gap-4 justify-center">
-          {categories.map((category, index) => (
-            <button
-              key={category}
-              data-category={category}
-              className={`px-6 py-2 rounded-3xl transition-all ${
-                index === active
-                  ? "bg-brand-secondary text-white"
-                  : "bg-transparent border border-white/20 hover:border-brand-primary"
-              }`}
-              onClick={() => {
-                setActive(index);
-                const menuElement = document.getElementById('menu');
-                if (menuElement) {
-                  menuElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }
-              }}
-            >
-              {category}
-            </button>
-          ))}
-        </div>
       </motion.div>
 
-      <div className="mt-8 grid md:grid-cols-3 sm:grid-cols-2 grid-cols-1 gap-4 min-h-[450px]">
-        {active === 2 ? (
-          // Catering Section
-          <div className="col-span-full">
-            <div className="bg-brand-secondary rounded-3xl p-12 text-center border-2 border-white/10">
-              <h3 className="text-4xl md:text-5xl font-display tracking-wider mb-6">CATERING AVAILABLE</h3>
-              
-              {/* Video Section */}
-              <div className="mb-8 max-w-md mx-auto">
-                <video
-                  ref={videoRef}
-                  className="w-full h-auto rounded-lg"
-                  style={{ 
-                    opacity: videoOpacity,
-                    transition: 'opacity 0.5s ease-out',
-                    display: videoOpacity === 0 ? 'none' : 'block'
-                  }}
-                  controls
-                  playsInline
-                  onTimeUpdate={handleTimeUpdate}
-                  onEnded={handleVideoEnded}
-                >
-                  <source src="/pictures/smoker-process/advertisement.mp4" type="video/mp4" />
-                </video>
-              </div>
-
-              <p className="text-xl mb-8 text-white/80">
-                Parties • Weddings • Corporate Events • Special Occasions
-              </p>
-              <p className="text-lg mb-8 max-w-2xl mx-auto text-white/70">
-                Let us bring authentic wood-smoked BBQ to your next event. From intimate gatherings 
-                to large celebrations, we've got you covered with our full-service catering.
-              </p>
-              <div className="mb-8">
-                <p className="text-2xl font-bold mb-4">Call for Pricing & Availability</p>
-                <a 
-                  href="tel:812-205-0559" 
-                  className="text-4xl md:text-5xl font-display text-brand-primary hover:text-brand-primary transition-all tracking-wider"
-                >
-                  812-205-0559
-                </a>
-              </div>
-              <div className="grid md:grid-cols-3 gap-6 mt-10 text-left">
-                <div className="bg-black/30 p-6 rounded-xl">
-                  <h4 className="font-bold text-lg mb-2">Party Platters</h4>
-                  <p className="text-white/70">Perfect for game days, family gatherings, and celebrations</p>
-                </div>
-                <div className="bg-black/30 p-6 rounded-xl">
-                  <h4 className="font-bold text-lg mb-2">Wedding Catering</h4>
-                  <p className="text-white/70">Full-service catering for your special day</p>
-                </div>
-                <div className="bg-black/30 p-6 rounded-xl">
-                  <h4 className="font-bold text-lg mb-2">Corporate Events</h4>
-                  <p className="text-white/70">Impress your team and clients with authentic BBQ</p>
-                </div>
-              </div>
+      <div className="space-y-14">
+        {sections.map((section) => (
+          <section key={section}>
+            <h3 className="font-display text-3xl tracking-wider text-white border-b-2 border-brand-primary pb-2 mb-1 uppercase">
+              {SECTION_LABEL[section]}
+            </h3>
+            {SECTION_NOTE[section] && (
+              <p className="text-sm italic text-white/40 mb-4">{SECTION_NOTE[section]}</p>
+            )}
+            <div className={SECTION_NOTE[section] ? "" : "mt-4"}>
+              {items
+                .filter((i) => i.section === section)
+                .map((item) => (
+                  <ItemRow key={item.id} item={item} />
+                ))}
             </div>
-          </div>
-        ) : (
-          // Menu Items
-          filteredItems.map((item, index) => (
-            <motion.div 
-              key={item.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: index * 0.1 }}
-              whileHover={{ scale: 1.03, y: -5 }}
-              className="bg-brand-secondary rounded-3xl relative overflow-hidden group"
-            >
-              <div className="w-full bg-white/10 h-[210px] grid place-content-center rounded-bl-[46px] rounded-tl-2xl rounded-tr-2xl">
-                <div className="relative w-36 h-36 hover:scale-110 transition-all">
-                  <Image
-                    src={item.image}
-                    alt={item.title}
-                    fill
-                    className="rounded-full object-cover"
-                  />
-                </div>
-              </div>
-              <div className="p-[25px] text-white">
-                <h4 className="text-xl font-semibold mb-3">{item.title}</h4>
-                <p className="text-[15px] text-white/70">{item.description}</p>
-                <div className="flex justify-between items-center mt-4">
-                  <span className="text-xl font-bold">${item.price}</span>
-                  <button
-                    onClick={() => {
-                      if (item.includedSides) {
-                        setSidePickerItem(item);
-                      } else {
-                        add({ id: item.id, title: item.title, price: item.price });
-                      }
-                    }}
-                    aria-label={`Add ${item.title} to order`}
-                    className="w-10 h-10 rounded-full bg-brand-primary grid place-content-center hover:opacity-70 transition-all cursor-pointer"
-                  >
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M3 1a1 1 0 000 2h1.22l.305 1.222a.997.997 0 00.01.042l1.358 5.43-.893.892C3.74 11.846 4.632 14 6.414 14H15a1 1 0 000-2H6.414l1-1H14a1 1 0 00.894-.553l3-6A1 1 0 0017 3H6.28l-.31-1.243A1 1 0 005 1H3zM16 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM6.5 18a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          ))
-        )}
-      </div>
+          </section>
+        ))}
 
-      {sidePickerItem && (
-        <SidePicker
-          item={sidePickerItem}
-          sides={sideOptions}
-          required={sidePickerItem.includedSides ?? 2}
-          onConfirm={(chosen) => {
-            add({
-              id: sidePickerItem.id,
-              title: sidePickerItem.title,
-              price: sidePickerItem.price,
-              sides: chosen,
-            });
-            setSidePickerItem(null);
-          }}
-          onClose={() => setSidePickerItem(null)}
-        />
-      )}
+        {/* Catering — call for pricing */}
+        <section id="catering">
+          <h3 className="font-display text-3xl tracking-wider text-white border-b-2 border-brand-primary pb-2 mb-4 uppercase">
+            Catering
+          </h3>
+          <p className="text-white/60 mb-4">
+            Parties, weddings, corporate events, and special occasions — full-service wood-smoked BBQ.
+            Call for pricing &amp; availability.
+          </p>
+          <a
+            href="tel:812-205-0559"
+            className="inline-block font-display text-3xl md:text-4xl text-brand-primary tracking-wider hover:opacity-80 transition-all"
+          >
+            812-205-0559
+          </a>
+        </section>
+      </div>
     </div>
   );
 }

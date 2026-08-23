@@ -1,10 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { square, LOCATION_ID } from "@/lib/square";
-import { getMenuItem } from "@/lib/menu";
+import { getMenuMap } from "@/lib/catalog";
 
-// Browser sends only item IDs + quantities; the server looks up prices itself,
-// so a tampered request can never change what gets charged.
-type CartLine = { id: number; quantity: number; sides?: number[] };
+// Browser sends only Square catalog ids + quantities. The server validates each
+// id against the live McSorleys menu and lets Square price the order from the
+// catalog — so a tampered request can never change what gets charged.
+type CartLine = { id: string; quantity: number };
 type Body = {
   sourceId: string;
   items: CartLine[];
@@ -28,38 +29,19 @@ export async function POST(req: Request) {
   if (!body.name?.trim() || !body.phone?.trim())
     return new Response("Name and phone are required", { status: 400 });
 
-  // Build line items from SERVER-SIDE prices, validating chosen sides too.
+  // Validate every cart line against the live menu, then reference the catalog
+  // object so Square applies the correct price and any configured tax.
+  const menu = await getMenuMap();
   const lineItems = [];
   for (const line of body.items) {
-    const item = getMenuItem(Number(line.id));
+    const item = menu.get(String(line.id));
     const qty = Math.floor(Number(line.quantity));
     if (!item || !Number.isFinite(qty) || qty < 1) {
       return new Response("Invalid item in cart", { status: 400 });
     }
-
-    // Plates require exactly N sides chosen from the Sides menu.
-    let note: string | undefined;
-    if (item.includedSides) {
-      const sideIds = Array.isArray(line.sides) ? line.sides.map(Number) : [];
-      if (sideIds.length !== item.includedSides) {
-        return new Response(`Please choose ${item.includedSides} sides for ${item.title}`, { status: 400 });
-      }
-      const sideNames: string[] = [];
-      for (const sid of sideIds) {
-        const side = getMenuItem(sid);
-        if (!side || side.category !== "Sides") {
-          return new Response("Invalid side selection", { status: 400 });
-        }
-        sideNames.push(side.title);
-      }
-      note = `Sides: ${sideNames.join(", ")}`;
-    }
-
     lineItems.push({
-      name: item.title,
+      catalogObjectId: item.id, // ITEM_VARIATION id → Square prices & taxes it
       quantity: String(qty),
-      basePriceMoney: { amount: BigInt(Math.round(item.price * 100)), currency: "USD" as const },
-      ...(note ? { note } : {}),
     });
   }
 
@@ -70,7 +52,7 @@ export async function POST(req: Request) {
 
   try {
     // 1) Create the order with a PICKUP fulfillment (how it reaches the kitchen).
-    //    Dine-in is modeled as a tagged pickup (Square has no DINE_IN fulfillment).
+    //    Dine-in is modeled as a tagged pickup (Square has no DINE_IN type).
     const orderRes = await square.orders.create({
       idempotencyKey: randomUUID(),
       order: {
@@ -96,12 +78,12 @@ export async function POST(req: Request) {
 
     const order = orderRes.order;
     const orderId = order?.id;
-    const amount = order?.totalMoney?.amount; // BigInt, server-computed
+    const amount = order?.totalMoney?.amount; // BigInt, server-computed by Square
     if (!orderId || amount == null) {
       return new Response("Could not create the order", { status: 502 });
     }
 
-    // 2) Charge the card for the SERVER total and apply it to the order.
+    // 2) Charge the card for Square's computed total and apply it to the order.
     //    Order now has a fulfillment AND is paid → it appears live in the kitchen.
     await square.payments.create({
       idempotencyKey: randomUUID(),
