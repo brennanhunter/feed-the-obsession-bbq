@@ -1,9 +1,10 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import Script from "next/script";
 import { useCart } from "./CartContext";
 import { business } from "@/lib/business";
+import { getOpenStatus, getPickupOptions, type PickupOption } from "@/lib/hours";
 
 const APP_ID = process.env.NEXT_PUBLIC_SQUARE_APPLICATION_ID;
 const LOCATION_ID = process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID;
@@ -33,22 +34,36 @@ export default function Checkout({ onDone }: { onDone?: () => void }) {
   const [table, setTable] = useState("");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "paying" | "done" | "error">("idle");
   const [error, setError] = useState("");
+  // Open/closed status — computed client-side (Eastern time) to avoid SSR mismatch.
+  const [openStatus, setOpenStatus] = useState<{ open: boolean; label: string } | null>(null);
+  const [pickupOpts, setPickupOpts] = useState<{ asap: boolean; slots: PickupOption[] } | null>(null);
+  const [pickup, setPickup] = useState<string>("asap"); // "asap" or a slot ISO
+  useEffect(() => {
+    setOpenStatus(getOpenStatus());
+    const opts = getPickupOptions();
+    setPickupOpts(opts);
+    setPickup(opts.asap ? "asap" : opts.slots[0]?.iso ?? "");
+  }, []);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const cardRef = useRef<any>(null);
+  const initStarted = useRef(false); // reserve synchronously so the form attaches once
 
   // Online ordering is "live" only once Square keys are present.
   const configured = Boolean(APP_ID && LOCATION_ID);
 
   async function initSquare() {
-    if (!configured || !window.Square || cardRef.current) return;
+    if (!configured || !window.Square || initStarted.current) return;
+    initStarted.current = true;
     try {
       const payments = window.Square.payments(APP_ID!, LOCATION_ID!);
       const card = await payments.card();
       await card.attach("#card-container");
       cardRef.current = card;
     } catch (e) {
+      initStarted.current = false; // allow a retry on failure
       console.error("Square card init failed:", e);
     }
   }
@@ -56,12 +71,20 @@ export default function Checkout({ onDone }: { onDone?: () => void }) {
   async function pay() {
     setError("");
     if (!cardRef.current || items.length === 0) return;
-    if (!name.trim() || !phone.trim()) {
-      setError("Please add your name and phone.");
+    if (!name.trim() || !phone.trim() || !email.trim()) {
+      setError("Please add your name, phone, and email.");
+      return;
+    }
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim())) {
+      setError("Please enter a valid email for your confirmation.");
       return;
     }
     if (channel === "DINE_IN" && !table.trim()) {
       setError("Please enter your table number.");
+      return;
+    }
+    if (!pickup) {
+      setError("Please choose a pickup time.");
       return;
     }
     setStatus("paying");
@@ -74,11 +97,13 @@ export default function Checkout({ onDone }: { onDone?: () => void }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           sourceId: result.token,
-          items: items.map((i) => ({ id: i.id, quantity: i.qty, sides: i.sides?.map((s) => s.id) ?? [] })),
+          items: items.map((i) => ({ id: i.id, quantity: i.qty })),
           channel,
           table: channel === "DINE_IN" ? table.trim() : undefined,
           name: name.trim(),
           phone: phone.trim(),
+          email: email.trim(),
+          pickupAt: pickup === "asap" ? undefined : pickup,
         }),
       });
       if (!res.ok) throw new Error((await res.text()) || "Payment failed.");
@@ -95,7 +120,7 @@ export default function Checkout({ onDone }: { onDone?: () => void }) {
     return (
       <div className="text-center py-8">
         <p className="text-2xl text-green-400 font-bold mb-2">Order placed! 🍖</p>
-        <p className="text-white/70">We&apos;ll get it on the smoker. See you soon!</p>
+        <p className="text-white/70">We&apos;ll get it on the smoker — a confirmation is on its way to your email. See you soon!</p>
         {onDone && (
           <button onClick={onDone} className="mt-6 px-6 py-2 rounded-full bg-brand-primary">
             Close
@@ -139,6 +164,48 @@ export default function Checkout({ onDone }: { onDone?: () => void }) {
         }}
       />
 
+      {/* Confidence cues */}
+      <div className="mb-4 rounded-xl bg-black/40 border border-white/10 p-3.5 text-sm space-y-1.5">
+        {openStatus && (
+          <p className="flex items-center gap-2">
+            <span className={openStatus.open ? "text-green-400" : "text-white/50"}>●</span>
+            <span className={openStatus.open ? "text-green-400 font-semibold" : "text-white/70"}>
+              {openStatus.label}
+            </span>
+          </p>
+        )}
+        <p className="text-white/70">⏱️ Most orders ready in ~15–20 min</p>
+        <p className="text-white/70">📍 Pickup at {business.address.full}</p>
+        <p className="text-white/70">✉️ Email confirmation sent instantly</p>
+      </div>
+
+      {/* Pickup time — scheduling is required when we're closed */}
+      {pickupOpts && (
+        <div className="mb-4">
+          <label className="block text-sm mb-1.5">
+            {pickupOpts.asap ? (
+              <span className="text-white/70">Pickup time</span>
+            ) : (
+              <span className="text-brand-primary font-semibold">
+                We&apos;re closed right now — schedule a pickup time
+              </span>
+            )}
+          </label>
+          <select
+            value={pickup}
+            onChange={(e) => setPickup(e.target.value)}
+            className="w-full p-3 rounded bg-black/40 border border-white/20 text-white focus:outline-none focus:border-brand-primary"
+          >
+            {pickupOpts.asap && <option value="asap">ASAP — ready in ~20 min</option>}
+            {pickupOpts.slots.map((s) => (
+              <option key={s.iso} value={s.iso}>
+                {s.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
       {/* Dine-in vs Take-out */}
       <div className="flex gap-3 mb-4">
         {(["TAKE_OUT", "DINE_IN"] as const).map((c) => (
@@ -173,6 +240,13 @@ export default function Checkout({ onDone }: { onDone?: () => void }) {
         placeholder="Phone"
         value={phone}
         onChange={(e) => setPhone(e.target.value)}
+        className="w-full mb-3 p-2 rounded bg-black/40 border border-white/20"
+      />
+      <input
+        type="email"
+        placeholder="Email (for your confirmation)"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
         className="w-full mb-3 p-2 rounded bg-black/40 border border-white/20"
       />
 

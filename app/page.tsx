@@ -3,11 +3,16 @@ import LogoOverlay from "./components/LogoOverlay";
 import Carousel from "./components/Carousel";
 import FindTheSmoke from "./components/FindTheSmoke";
 import MenuPreview from "./components/MenuPreview";
+import Reviews from "./components/Reviews";
 import CustomSmokers from "./components/CustomSmokers";
 import Gallery from "./components/Gallery";
 import Footer from "./components/Footer";
+import { getMenu } from "@/lib/catalog";
 
-export default function Home() {
+export const revalidate = 60;
+
+export default async function Home() {
+  const menu = await getMenu();
   return (
     <div className="min-h-screen bg-black text-white">
       {/* Primary SEO heading — one H1 per page, keyword + location. Visually hidden
@@ -21,7 +26,8 @@ export default function Home() {
       <LogoOverlay />
       <Carousel />
       <FindTheSmoke />
-      <MenuPreview />
+      <MenuPreview items={menu} />
+      <Reviews />
       <CustomSmokers />
       <Gallery />
       <Footer />

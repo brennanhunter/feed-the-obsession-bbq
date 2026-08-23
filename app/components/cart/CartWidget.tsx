@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import { motion, useAnimationControls } from "framer-motion";
 import { useCart } from "./CartContext";
 import Checkout from "./Checkout";
 
@@ -8,19 +9,39 @@ export default function CartWidget() {
   const { items, count, totalCents, setQty, remove } = useCart();
   const [open, setOpen] = useState(false);
 
+  // Pop the cart button whenever the item count goes up, so adding is obvious.
+  const controls = useAnimationControls();
+  const prevCount = useRef(count);
+  useEffect(() => {
+    if (count > prevCount.current) {
+      controls.start({ scale: [1, 1.35, 0.92, 1], rotate: [0, -6, 4, 0] }, { duration: 0.5, ease: "easeOut" });
+    }
+    prevCount.current = count;
+  }, [count, controls]);
+
   return (
     <>
       {/* Floating cart button — only appears once there's something to order,
           so it doesn't compete with the hero's CTA on an empty cart. */}
       {count > 0 && (
-        <button
+        <motion.button
           type="button"
           onClick={() => setOpen(true)}
-          className="fixed bottom-6 right-6 z-[70] flex items-center gap-2 px-5 py-3 rounded-full bg-brand-primary text-white font-bold shadow-lg hover:opacity-90 transition-all"
+          animate={controls}
+          whileHover={{ scale: 1.05 }}
+          className="fixed bottom-6 right-6 z-[70] flex items-center gap-2 px-5 py-3 rounded-full bg-brand-primary text-white font-bold shadow-lg"
         >
           🛒 View Order
-          <span className="ml-1 bg-white text-brand-primary rounded-full px-2 text-sm font-bold">{count}</span>
-        </button>
+          <motion.span
+            key={count}
+            initial={{ scale: 0.4 }}
+            animate={{ scale: 1 }}
+            transition={{ type: "spring", stiffness: 600, damping: 15 }}
+            className="ml-1 bg-white text-brand-primary rounded-full px-2 text-sm font-bold"
+          >
+            {count}
+          </motion.span>
+        </motion.button>
       )}
 
       {/* Drawer */}
@@ -41,23 +62,20 @@ export default function CartWidget() {
               ) : (
                 <ul className="flex flex-col gap-4">
                   {items.map((i) => (
-                    <li key={i.uid} className="flex items-start justify-between gap-3">
+                    <li key={i.id} className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <p className="font-semibold truncate">{i.title}</p>
-                        {i.sides && i.sides.length > 0 && (
-                          <p className="text-white/50 text-sm">Sides: {i.sides.map((s) => s.title).join(", ")}</p>
-                        )}
                         <p className="text-white/60 text-sm">${i.price.toFixed(2)} each</p>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
-                        <button type="button" onClick={() => setQty(i.uid, i.qty - 1)} aria-label="Decrease" className="w-7 h-7 rounded-full border border-white/20 hover:border-brand-primary">
+                        <button type="button" onClick={() => setQty(i.id, i.qty - 1)} aria-label="Decrease" className="w-7 h-7 rounded-full border border-white/20 hover:border-brand-primary">
                           −
                         </button>
                         <span className="w-6 text-center">{i.qty}</span>
-                        <button type="button" onClick={() => setQty(i.uid, i.qty + 1)} aria-label="Increase" className="w-7 h-7 rounded-full border border-white/20 hover:border-brand-primary">
+                        <button type="button" onClick={() => setQty(i.id, i.qty + 1)} aria-label="Increase" className="w-7 h-7 rounded-full border border-white/20 hover:border-brand-primary">
                           +
                         </button>
-                        <button type="button" onClick={() => remove(i.uid)} aria-label="Remove item" className="ml-1 text-white/40 hover:text-brand-primary">
+                        <button type="button" onClick={() => remove(i.id)} aria-label="Remove item" className="ml-1 text-white/40 hover:text-brand-primary">
                           ✕
                         </button>
                       </div>
