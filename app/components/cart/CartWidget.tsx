@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import { motion, useAnimationControls } from "framer-motion";
 import { useCart } from "./CartContext";
 import Checkout from "./Checkout";
 
@@ -8,19 +9,39 @@ export default function CartWidget() {
   const { items, count, totalCents, setQty, remove } = useCart();
   const [open, setOpen] = useState(false);
 
+  // Pop the cart button whenever the item count goes up, so adding is obvious.
+  const controls = useAnimationControls();
+  const prevCount = useRef(count);
+  useEffect(() => {
+    if (count > prevCount.current) {
+      controls.start({ scale: [1, 1.35, 0.92, 1], rotate: [0, -6, 4, 0] }, { duration: 0.5, ease: "easeOut" });
+    }
+    prevCount.current = count;
+  }, [count, controls]);
+
   return (
     <>
       {/* Floating cart button — only appears once there's something to order,
           so it doesn't compete with the hero's CTA on an empty cart. */}
       {count > 0 && (
-        <button
+        <motion.button
           type="button"
           onClick={() => setOpen(true)}
-          className="fixed bottom-6 right-6 z-[70] flex items-center gap-2 px-5 py-3 rounded-full bg-brand-primary text-white font-bold shadow-lg hover:opacity-90 transition-all"
+          animate={controls}
+          whileHover={{ scale: 1.05 }}
+          className="fixed bottom-6 right-6 z-[70] flex items-center gap-2 px-5 py-3 rounded-full bg-brand-primary text-white font-bold shadow-lg"
         >
           🛒 View Order
-          <span className="ml-1 bg-white text-brand-primary rounded-full px-2 text-sm font-bold">{count}</span>
-        </button>
+          <motion.span
+            key={count}
+            initial={{ scale: 0.4 }}
+            animate={{ scale: 1 }}
+            transition={{ type: "spring", stiffness: 600, damping: 15 }}
+            className="ml-1 bg-white text-brand-primary rounded-full px-2 text-sm font-bold"
+          >
+            {count}
+          </motion.span>
+        </motion.button>
       )}
 
       {/* Drawer */}
