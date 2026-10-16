@@ -21,6 +21,7 @@ export type MenuItem = {
   bestSeller?: boolean;
   notice?: string; // lead time / ordering rule shown under the item
   proteinPicks?: number; // 2 Meat / 3 Meat plates: how many proteins to choose
+  callToOrder?: boolean; // listed online but ordered by phone (owner's call)
 };
 
 // Proteins a customer can pick for the 2 Meat and 3 Meat plates (owner's list,
@@ -83,6 +84,12 @@ function noticeFor(title: string): string | undefined {
   return undefined;
 }
 
+// Sauce bottles are listed online but sold over the phone / at the counter
+// (owner's call, Oct 2026).
+function callToOrderFor(title: string): boolean {
+  return title.toLowerCase().includes("bbq sauce");
+}
+
 function proteinPicksFor(title: string): number | undefined {
   const t = title.toLowerCase();
   if (t.startsWith("2 meat")) return 2;
@@ -114,7 +121,7 @@ function describe(title: string): string {
     "ribs full rack": "A whole rack, smoked low and slow.",
     "whole pork butt": "Smoked whole and ready to pull.",
     "whole smoked brisket": "A full packer, smoked overnight.",
-    side: "Beans, sliced potatoes, coleslaw, or the pitmaster's choice of the week.",
+    side: "Beans, sliced potatoes, coleslaw, chicken salad, or the pitmaster's choice of the week.",
     "16oz bbq sauce": "Sweet Heat homemade sauce. Bring the bottle back and refill for $10.",
     chicken: "Add a piece of smoked chicken to any order.",
   };
@@ -154,30 +161,44 @@ export async function getMenu(): Promise<MenuItem[]> {
     const cat = (catId && catName[catId]) || "";
     if (cat.toLowerCase() !== MENU_CATEGORY) continue;
 
-    const variation = d.variations?.[0];
-    const id = variation?.id;
-    const price = money(variation?.itemVariationData?.priceMoney);
-    if (!id || price <= 0) continue;
+    const baseTitle = (d.name || "").trim();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const variations: any[] = (d.variations || []).filter(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (v: any) => v?.id && money(v.itemVariationData?.priceMoney) > 0
+    );
+    if (variations.length === 0) continue;
 
-    const title = (d.name || "").trim();
-    const section = sectionFor(title);
-    const notice = noticeFor(title);
-    // The Square description may carry the lead time too; the notice line
-    // below the item already says it, so drop that sentence from the blurb.
-    const description = (d.description || describe(title))
-      .replace(notice ? /\s*[^.]*notice[^.]*\.?/i : /$^/, "")
-      .trim();
-    items.push({
-      id,
-      title,
-      price,
-      description,
-      image: imageFor(title),
-      section,
-      ...(BEST_SELLERS.includes(title.toLowerCase()) ? { bestSeller: true } : {}),
-      ...(notice ? { notice } : {}),
-      ...(proteinPicksFor(title) ? { proteinPicks: proteinPicksFor(title) } : {}),
-    });
+    // An item with several priced variations (e.g. pork butt in three sizes)
+    // becomes one line per size; the variation id is what checkout charges.
+    for (const variation of variations) {
+      const id: string = variation.id;
+      const price = money(variation.itemVariationData?.priceMoney);
+      const vname = (variation.itemVariationData?.name || "").trim();
+      const title =
+        variations.length > 1 && vname && vname.toLowerCase() !== "regular"
+          ? `${baseTitle} · ${vname}`
+          : baseTitle;
+      const section = sectionFor(baseTitle);
+      const notice = noticeFor(baseTitle);
+      // The Square description may carry the lead time too; the notice line
+      // below the item already says it, so drop that sentence from the blurb.
+      const description = (d.description || describe(baseTitle))
+        .replace(notice ? /\s*[^.]*notice[^.]*\.?/i : /$^/, "")
+        .trim();
+      items.push({
+        id,
+        title,
+        price,
+        description,
+        image: imageFor(baseTitle),
+        section,
+        ...(BEST_SELLERS.includes(baseTitle.toLowerCase()) ? { bestSeller: true } : {}),
+        ...(notice ? { notice } : {}),
+        ...(proteinPicksFor(baseTitle) ? { proteinPicks: proteinPicksFor(baseTitle) } : {}),
+        ...(callToOrderFor(baseTitle) ? { callToOrder: true } : {}),
+      });
+    }
   }
 
   // Sections in menu order; plates in the printed-menu order (ties: with-side

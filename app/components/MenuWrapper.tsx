@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { MENU_SECTIONS, PROTEINS, type MenuItem, type MenuSection } from "@/lib/catalog";
+import { business } from "@/lib/business";
 import { useCart } from "./cart/CartContext";
 import CateringForm from "./CateringForm";
 
@@ -50,14 +51,24 @@ function ItemRow({ item }: { item: MenuItem }) {
         <span className="font-bold text-lg text-brand-primary shrink-0">
           ${item.price.toFixed(2)}
         </span>
-        <button
-          onClick={onAdd}
-          disabled={!ready}
-          className="shrink-0 px-4 py-1.5 rounded-full bg-brand-primary text-white text-sm font-semibold hover:opacity-80 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-          aria-label={`Add ${item.title} to order`}
-        >
-          Add +
-        </button>
+        {item.callToOrder ? (
+          <a
+            href={business.phoneHref}
+            className="shrink-0 px-4 py-1.5 rounded-full border border-brand-primary text-brand-primary text-sm font-semibold hover:bg-brand-primary hover:text-white transition-all"
+            aria-label={`Call to order ${item.title}`}
+          >
+            Call to order
+          </a>
+        ) : (
+          <button
+            onClick={onAdd}
+            disabled={!ready}
+            className="shrink-0 px-4 py-1.5 rounded-full bg-brand-primary text-white text-sm font-semibold hover:opacity-80 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            aria-label={`Add ${item.title} to order`}
+          >
+            Add +
+          </button>
+        )}
       </div>
       {item.description && (
         <p className="mt-1 text-sm text-white/50 pr-24">{item.description}</p>
@@ -134,6 +145,29 @@ export default function MenuWrapper({ items }: { items: MenuItem[] }) {
             </div>
           </section>
         ))}
+
+        {/* Google review offer (owner's sheet, Oct 2026) */}
+        <section
+          id="review-offer"
+          className="rounded-2xl border border-brand-primary/60 bg-brand-primary/10 p-6 md:p-8 text-center"
+        >
+          <h3 className="font-display text-3xl tracking-wider text-brand-primary uppercase">
+            Love it? Tell Google.
+          </h3>
+          <p className="mt-3 text-white/80 max-w-xl mx-auto">
+            Leave us a Google review and take <span className="font-bold text-white">10% off</span> your
+            next visit — <span className="font-bold text-white">15%</span> with a photo,{" "}
+            <span className="font-bold text-white">20%</span> with a video. Show it at the counter.
+          </p>
+          <a
+            href={business.maps.review}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 mt-5 px-7 py-3 rounded-full bg-brand-primary text-white font-bold hover:opacity-80 transition-all"
+          >
+            Leave a review →
+          </a>
+        </section>
 
         {/* Catering — call for pricing */}
         <section id="catering">

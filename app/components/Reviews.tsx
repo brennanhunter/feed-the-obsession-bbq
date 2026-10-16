@@ -18,7 +18,7 @@ export default function Reviews() {
       <div className="container mx-auto max-w-5xl px-4 text-center">
         <Stars className="text-2xl" />
         <p className="mt-3 text-white/70">
-          <span className="font-bold text-white">5.0</span> on Google · 7 reviews
+          <span className="font-bold text-white">4.8</span> on Google · 16 reviews
         </p>
         <h2 className="mt-4 text-[36px] md:text-[40px] font-display tracking-wider">
           WHAT FOLKS ARE SAYING
