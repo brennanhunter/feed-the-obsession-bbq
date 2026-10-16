@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Feed The Obsession BBQ — Table Card</title>
+<!-- Table card: two 5x7 cards on a landscape letter sheet, cut on the marks.
+     QR goes to the online ordering page (tagged utm_source=table_card so
+     Vercel Analytics can count scans). Build: node print/build.mjs order-card -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Barlow+Condensed:wght@400;600;700&display=swap" rel="stylesheet" />
+<style>
+  @page { size: letter landscape; margin: 0; }
+  :root { --red: #c1282d; --ink: #201a16; --muted: #6f6458; --cream: #f5efe1; --black: #0d0d0d; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #fff; }
+  body { width: 1056px; height: 816px; overflow: hidden; font-family: "Barlow Condensed", sans-serif; color: var(--ink); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .sheet { width: 1056px; height: 816px; display: flex; justify-content: center; align-items: center; gap: 48px; position: relative; }
+  .card { width: 480px; height: 672px; background: var(--cream); display: flex; flex-direction: column; overflow: hidden; position: relative; }
+  /* crop marks */
+  .card::before, .card::after { content: ""; position: absolute; left: -18px; right: -18px; height: 0; border-top: 1px solid #999; }
+  .card::before { top: -1px; } .card::after { bottom: -1px; }
+  .marks { position: absolute; inset: 0; pointer-events: none; }
+  .marks i { position: absolute; width: 0; height: 18px; border-left: 1px solid #999; }
+
+  header { background: var(--black); color: #fff; text-align: center; padding: 20px 0 14px; }
+  header img { width: 78px; display: block; margin: 0 auto; }
+  h1 { font-family: "Alfa Slab One", serif; font-weight: 400; font-size: 26px; letter-spacing: .8px; margin: 8px 0 0; line-height: 1; }
+  h1 .the { color: var(--red); }
+  .zz { height: 10px; background: var(--red); }
+  .zz.down { clip-path: polygon(0 0, 100% 0, 100% 40%, 97.5% 100%, 95% 40%, 92.5% 100%, 90% 40%, 87.5% 100%, 85% 40%, 82.5% 100%, 80% 40%, 77.5% 100%, 75% 40%, 72.5% 100%, 70% 40%, 67.5% 100%, 65% 40%, 62.5% 100%, 60% 40%, 57.5% 100%, 55% 40%, 52.5% 100%, 50% 40%, 47.5% 100%, 45% 40%, 42.5% 100%, 40% 40%, 37.5% 100%, 35% 40%, 32.5% 100%, 30% 40%, 27.5% 100%, 25% 40%, 22.5% 100%, 20% 40%, 17.5% 100%, 15% 40%, 12.5% 100%, 10% 40%, 7.5% 100%, 5% 40%, 2.5% 100%, 0 40%); }
+  .zz.up { transform: scaleY(-1); }
+
+  main { flex: 1; text-align: center; padding: 18px 28px 10px; display: flex; flex-direction: column; align-items: center; }
+  h2 { font-family: "Alfa Slab One", serif; font-weight: 400; font-size: 30px; line-height: 1.05; margin: 0; letter-spacing: .5px; }
+  h2 .red { color: var(--red); display: block; }
+  .sub { font-size: 16px; color: var(--muted); margin: 8px 0 12px; }
+  .qr { background: #fff; border: 2px solid #e2d8c4; border-radius: 10px; padding: 14px; }
+  .qr img { width: 204px; height: 204px; display: block; }
+  .steps { display: flex; gap: 10px; margin-top: 14px; width: 100%; }
+  .step { flex: 1; text-align: center; }
+  .step b { font-family: "Alfa Slab One", serif; font-weight: 400; color: var(--red); font-size: 20px; display: block; line-height: 1; }
+  .step span { display: block; font-weight: 600; font-size: 13px; line-height: 1.2; margin-top: 4px; text-transform: uppercase; letter-spacing: .3px; }
+  .tiny { font-size: 12.5px; color: var(--muted); margin-top: 10px; }
+
+  footer { background: var(--red); color: #fff; text-align: center; padding: 10px 20px 11px; }
+  .url { font-family: "Alfa Slab One", serif; font-weight: 400; font-size: 14.5px; letter-spacing: .5px; }
+  .call { font-size: 12px; letter-spacing: 2.5px; font-weight: 600; color: #ffe3e2; margin-top: 4px; }
+</style>
+</head>
+<body>
+<div class="sheet">
+  <div class="marks"><i style="left:24px;top:50px"></i><i style="left:24px;bottom:50px"></i><i style="left:504px;top:50px"></i><i style="left:504px;bottom:50px"></i><i style="left:552px;top:50px"></i><i style="left:552px;bottom:50px"></i><i style="left:1032px;top:50px"></i><i style="left:1032px;bottom:50px"></i></div>
+
+  <!-- card template, repeated twice -->
+  <div class="card">
+    <header>
+      <img src="../public/logo-red.png" alt="FTO Barbeque" />
+      <h1>FEED <span class="the">THE</span> OBSESSION</h1>
+    </header>
+    <div class="zz down"></div>
+    <main>
+      <h2>ORDER FROM <span class="red">YOUR TABLE</span></h2>
+      <p class="sub">Scan, pick your plates, pay on your phone. No app, no line.</p>
+      <div class="qr"><img src="qr-order.svg" alt="QR code to order online" /></div>
+      <div class="steps">
+        <div class="step"><b>1</b><span>Scan the code</span></div>
+        <div class="step"><b>2</b><span>Choose Dine-in &amp; enter your table #</span></div>
+        <div class="step"><b>3</b><span>Sit back. We'll take it from here.</span></div>
+      </div>
+      <p class="tiny">Point your phone camera at the code.</p>
+    </main>
+    <div class="zz up"></div>
+    <footer>
+      <div class="url">FEEDTHEOBSESSIONBBQ.COM/MENU</div>
+      <div class="call">OR ORDER AT THE COUNTER • 812-205-0559</div>
+    </footer>
+  </div>
+
+  <div class="card">
+    <header>
+      <img src="../public/logo-red.png" alt="FTO Barbeque" />
+      <h1>FEED <span class="the">THE</span> OBSESSION</h1>
+    </header>
+    <div class="zz down"></div>
+    <main>
+      <h2>ORDER FROM <span class="red">YOUR TABLE</span></h2>
+      <p class="sub">Scan, pick your plates, pay on your phone. No app, no line.</p>
+      <div class="qr"><img src="qr-order.svg" alt="QR code to order online" /></div>
+      <div class="steps">
+        <div class="step"><b>1</b><span>Scan the code</span></div>
+        <div class="step"><b>2</b><span>Choose Dine-in &amp; enter your table #</span></div>
+        <div class="step"><b>3</b><span>Sit back. We'll take it from here.</span></div>
+      </div>
+      <p class="tiny">Point your phone camera at the code.</p>
+    </main>
+    <div class="zz up"></div>
+    <footer>
+      <div class="url">FEEDTHEOBSESSIONBBQ.COM/MENU</div>
+      <div class="call">OR ORDER AT THE COUNTER • 812-205-0559</div>
+    </footer>
+  </div>
+</div>
+</body>
+</html>
