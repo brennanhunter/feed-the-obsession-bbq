@@ -62,20 +62,23 @@ export default function CartWidget() {
               ) : (
                 <ul className="flex flex-col gap-4">
                   {items.map((i) => (
-                    <li key={i.id} className="flex items-start justify-between gap-3">
+                    <li key={i.key} className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <p className="font-semibold truncate">{i.title}</p>
+                        {i.proteins && (
+                          <p className="text-brand-primary text-sm">{i.proteins.join(" + ")}</p>
+                        )}
                         <p className="text-white/60 text-sm">${i.price.toFixed(2)} each</p>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
-                        <button type="button" onClick={() => setQty(i.id, i.qty - 1)} aria-label="Decrease" className="w-7 h-7 rounded-full border border-white/20 hover:border-brand-primary">
+                        <button type="button" onClick={() => setQty(i.key, i.qty - 1)} aria-label="Decrease" className="w-7 h-7 rounded-full border border-white/20 hover:border-brand-primary">
                           −
                         </button>
                         <span className="w-6 text-center">{i.qty}</span>
-                        <button type="button" onClick={() => setQty(i.id, i.qty + 1)} aria-label="Increase" className="w-7 h-7 rounded-full border border-white/20 hover:border-brand-primary">
+                        <button type="button" onClick={() => setQty(i.key, i.qty + 1)} aria-label="Increase" className="w-7 h-7 rounded-full border border-white/20 hover:border-brand-primary">
                           +
                         </button>
-                        <button type="button" onClick={() => remove(i.id)} aria-label="Remove item" className="ml-1 text-white/40 hover:text-brand-primary">
+                        <button type="button" onClick={() => remove(i.key)} aria-label="Remove item" className="ml-1 text-white/40 hover:text-brand-primary">
                           ✕
                         </button>
                       </div>

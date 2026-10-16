@@ -31,7 +31,7 @@ export function orderNotifyEmail(opts: {
   const rows = items
     .map(
       (i) =>
-        `<tr><td style="padding:4px 12px 4px 0">${esc(i.title)} &times;${i.qty}</td><td style="padding:4px 0;text-align:right">${money(i.price * i.qty)}</td></tr>`
+        `<tr><td style="padding:4px 12px 4px 0">${esc(i.title)}${i.detail ? ` (${esc(i.detail)})` : ""} &times;${i.qty}</td><td style="padding:4px 0;text-align:right">${money(i.price * i.qty)}</td></tr>`
     )
     .join("");
 

@@ -35,6 +35,11 @@ export default function MenuPreview({ items }: { items: MenuItem[] }) {
           >
             <div className="flex items-baseline gap-3">
               <span className="font-semibold text-lg text-white shrink-0">{item.title}</span>
+              {item.bestSeller && (
+                <span className="shrink-0 rounded-full bg-brand-primary/20 text-brand-primary text-[11px] font-bold uppercase tracking-wider px-2 py-0.5">
+                  Best Seller
+                </span>
+              )}
               <span className="flex-1 border-b border-dotted border-white/25 translate-y-[-4px]" />
               <span className="font-bold text-lg text-brand-primary shrink-0">
                 ${item.price.toFixed(2)}

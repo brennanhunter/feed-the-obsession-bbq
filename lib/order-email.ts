@@ -1,6 +1,6 @@
 import { business } from "./business";
 
-export type OrderEmailLine = { title: string; qty: number; price: number };
+export type OrderEmailLine = { title: string; qty: number; price: number; detail?: string };
 
 const money = (n: number) => `$${n.toFixed(2)}`;
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -30,7 +30,11 @@ export function orderConfirmationEmail(opts: {
       (i) => `
       <tr>
         <td style="padding:9px 0;font-family:Arial,Helvetica,sans-serif;font-weight:bold;text-transform:uppercase;letter-spacing:.3px;color:${INK};font-size:15px;white-space:nowrap;vertical-align:bottom">
-          ${esc(i.title)}${i.qty > 1 ? ` &times;${i.qty}` : ""}
+          ${esc(i.title)}${i.qty > 1 ? ` &times;${i.qty}` : ""}${
+            i.detail
+              ? `<div style="font-weight:normal;text-transform:none;letter-spacing:0;color:#5b544a;font-size:13px">${esc(i.detail)}</div>`
+              : ""
+          }
         </td>
         <td style="padding:9px 8px;width:100%;vertical-align:bottom">
           <div style="border-bottom:2px dotted #c3b79c;height:11px"></div>

@@ -1,7 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { motion } from "framer-motion";
-import { MENU_SECTIONS, type MenuItem, type MenuSection } from "@/lib/catalog";
+import { MENU_SECTIONS, PROTEINS, type MenuItem, type MenuSection } from "@/lib/catalog";
 import { useCart } from "./cart/CartContext";
 import CateringForm from "./CateringForm";
 
@@ -12,27 +13,47 @@ const SECTION_LABEL: Record<MenuSection, string> = {
   "Daily Specials": "The Smoke Schedule",
   "Whole Cuts": "Whole Cuts & Catering",
   Sides: "Sides",
+  Extras: "Sauce & Extras",
 };
 
 const SECTION_NOTE: Partial<Record<MenuSection, string>> = {
   Plates: "Every plate comes with one side.",
-  "Daily Specials": "One every weekday — $9.99. Follow us for what's on.",
-  "Whole Cuts": "Order a day ahead — call 812-205-0559.",
+  "Daily Specials":
+    "One every weekday — $9.99. Plus 50¢ wings the first Friday of the month and a full rack for $19.99 every other Thursday.",
+  "Whole Cuts": "Order ahead — call 812-205-0559. Full rack needs 24 hours, whole brisket 3 days.",
 };
 
 function ItemRow({ item }: { item: MenuItem }) {
   const { add } = useCart();
+  // 2 Meat / 3 Meat plates: the customer picks their proteins before adding.
+  const need = item.proteinPicks ?? 0;
+  const [picks, setPicks] = useState<string[]>([]);
+  const ready = need === 0 || picks.length === need;
+  const toggle = (p: string) =>
+    setPicks((prev) =>
+      prev.includes(p) ? prev.filter((x) => x !== p) : prev.length < need ? [...prev, p] : prev
+    );
+  const onAdd = () => {
+    add({ id: item.id, title: item.title, price: item.price, proteins: need ? picks : undefined });
+    if (need) setPicks([]);
+  };
   return (
     <div className="py-3 border-b border-white/10">
       <div className="flex items-baseline gap-3">
         <span className="font-semibold text-lg text-white shrink-0">{item.title}</span>
+        {item.bestSeller && (
+          <span className="shrink-0 rounded-full bg-brand-primary/20 text-brand-primary text-[11px] font-bold uppercase tracking-wider px-2 py-0.5">
+            Best Seller
+          </span>
+        )}
         <span className="flex-1 border-b border-dotted border-white/25 translate-y-[-4px]" />
         <span className="font-bold text-lg text-brand-primary shrink-0">
           ${item.price.toFixed(2)}
         </span>
         <button
-          onClick={() => add({ id: item.id, title: item.title, price: item.price })}
-          className="shrink-0 px-4 py-1.5 rounded-full bg-brand-primary text-white text-sm font-semibold hover:opacity-80 transition-all"
+          onClick={onAdd}
+          disabled={!ready}
+          className="shrink-0 px-4 py-1.5 rounded-full bg-brand-primary text-white text-sm font-semibold hover:opacity-80 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
           aria-label={`Add ${item.title} to order`}
         >
           Add +
@@ -40,6 +61,38 @@ function ItemRow({ item }: { item: MenuItem }) {
       </div>
       {item.description && (
         <p className="mt-1 text-sm text-white/50 pr-24">{item.description}</p>
+      )}
+      {item.notice && (
+        <p className="mt-1 text-xs font-semibold uppercase tracking-wider text-brand-primary/90">
+          {item.notice}
+        </p>
+      )}
+      {need > 0 && (
+        <div className="mt-2">
+          <p className="text-xs text-white/60 mb-1.5">
+            Pick {need} meats{picks.length < need ? ` — ${need - picks.length} to go` : ""}:
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {PROTEINS.map((p) => {
+              const on = picks.includes(p);
+              return (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => toggle(p)}
+                  aria-pressed={on}
+                  className={`px-3 py-1 rounded-full text-sm border transition-colors ${
+                    on
+                      ? "bg-brand-primary border-brand-primary text-white"
+                      : "border-white/25 text-white/80 hover:border-brand-primary"
+                  }`}
+                >
+                  {p}
+                </button>
+              );
+            })}
+          </div>
+        </div>
       )}
     </div>
   );

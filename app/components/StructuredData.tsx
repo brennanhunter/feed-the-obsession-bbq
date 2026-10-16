@@ -9,7 +9,7 @@ export default function StructuredData() {
     "@id": `${business.url}/#restaurant`,
     name: business.name,
     description:
-      "Veteran-owned BBQ joint in DeLand, FL serving wood-smoked brisket, ribs, and pulled pork for dine-in and take-out, plus custom smoker builds and catering.",
+      "Veteran-owned BBQ shack in DeLand, FL serving wood-smoked brisket, ribs, and pulled pork for dine-in and take-out, plus custom smoker builds and catering.",
     url: business.url,
     telephone: `+1-${business.phone}`,
     image: `${business.url}/og-image.png`,

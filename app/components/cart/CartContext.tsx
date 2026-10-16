@@ -3,19 +3,25 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 
 export type CartItem = {
+  key: string; // id, plus the protein picks for 2/3 Meat plates
   id: string; // Square catalog (item variation) id
   title: string;
   price: number; // dollars
   qty: number;
+  proteins?: string[]; // 2 Meat / 3 Meat plates only
 };
 
-type AddInput = { id: string; title: string; price: number };
+type AddInput = { id: string; title: string; price: number; proteins?: string[] };
+
+// Same plate with different meats is a separate line.
+const keyOf = (i: { id: string; proteins?: string[] }) =>
+  i.proteins?.length ? `${i.id}|${i.proteins.join("+")}` : i.id;
 
 type Ctx = {
   items: CartItem[];
   add: (i: AddInput) => void;
-  remove: (id: string) => void;
-  setQty: (id: string, qty: number) => void;
+  remove: (key: string) => void;
+  setQty: (key: string, qty: number) => void;
   clear: () => void;
   count: number;
   totalCents: number;
@@ -30,7 +36,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     try {
       const saved = localStorage.getItem("fto-cart");
-      if (saved) setItems(JSON.parse(saved));
+      if (saved) {
+        // Carts saved before protein picks existed have no key — derive it.
+        const parsed = JSON.parse(saved) as Partial<CartItem>[];
+        setItems(
+          parsed
+            .filter((i): i is CartItem & Partial<CartItem> => Boolean(i && i.id))
+            .map((i) => ({ ...i, key: i.key ?? keyOf({ id: i.id, proteins: i.proteins }) }))
+        );
+      }
     } catch {
       /* ignore bad/blocked storage */
     }
@@ -46,20 +60,31 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const add: Ctx["add"] = (i) =>
     setItems((prev) => {
-      const found = prev.find((p) => p.id === i.id);
+      const key = keyOf(i);
+      const found = prev.find((p) => p.key === key);
       return found
-        ? prev.map((p) => (p.id === i.id ? { ...p, qty: p.qty + 1 } : p))
-        : [...prev, { id: i.id, title: i.title, price: i.price, qty: 1 }];
+        ? prev.map((p) => (p.key === key ? { ...p, qty: p.qty + 1 } : p))
+        : [
+            ...prev,
+            {
+              key,
+              id: i.id,
+              title: i.title,
+              price: i.price,
+              qty: 1,
+              ...(i.proteins?.length ? { proteins: i.proteins } : {}),
+            },
+          ];
     });
 
-  const remove: Ctx["remove"] = (id) =>
-    setItems((prev) => prev.filter((p) => p.id !== id));
+  const remove: Ctx["remove"] = (key) =>
+    setItems((prev) => prev.filter((p) => p.key !== key));
 
-  const setQty: Ctx["setQty"] = (id, qty) =>
+  const setQty: Ctx["setQty"] = (key, qty) =>
     setItems((prev) =>
       qty <= 0
-        ? prev.filter((p) => p.id !== id)
-        : prev.map((p) => (p.id === id ? { ...p, qty } : p))
+        ? prev.filter((p) => p.key !== key)
+        : prev.map((p) => (p.key === key ? { ...p, qty } : p))
     );
 
   const clear = () => setItems([]);

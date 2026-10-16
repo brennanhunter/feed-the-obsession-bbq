@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { square, LOCATION_ID } from "@/lib/square";
-import { getMenuMap } from "@/lib/catalog";
+import { getMenuMap, PROTEINS } from "@/lib/catalog";
 import { sendEmail } from "@/lib/mailer";
 import { orderConfirmationEmail, type OrderEmailLine } from "@/lib/order-email";
 import { orderNotifyEmail } from "@/lib/order-notify";
@@ -10,7 +10,7 @@ import { business } from "@/lib/business";
 // Browser sends only Square catalog ids + quantities. The server validates each
 // id against the live McSorleys menu and lets Square price the order from the
 // catalog — so a tampered request can never change what gets charged.
-type CartLine = { id: string; quantity: number };
+type CartLine = { id: string; quantity: number; proteins?: string[] };
 type Body = {
   sourceId: string;
   items: CartLine[];
@@ -54,8 +54,29 @@ export async function POST(req: Request) {
     if (!item || !Number.isFinite(qty) || qty < 1) {
       return new Response("Invalid item in cart", { status: 400 });
     }
-    lineItems.push({ catalogObjectId: item.id, quantity: String(qty) });
-    emailLines.push({ title: item.title, qty, price: item.price });
+    // 2 Meat / 3 Meat plates must carry exactly N picks from the owner's list;
+    // they ride to the kitchen as the line-item note on the Square ticket.
+    const picks = Array.isArray(line.proteins) ? line.proteins.map(String) : [];
+    let detail: string | undefined;
+    if (item.proteinPicks) {
+      const allowed = PROTEINS as readonly string[];
+      const valid =
+        picks.length === item.proteinPicks &&
+        picks.every((p) => allowed.includes(p)) &&
+        new Set(picks).size === picks.length;
+      if (!valid) {
+        return new Response(`Please pick ${item.proteinPicks} meats for the ${item.title}`, {
+          status: 400,
+        });
+      }
+      detail = picks.join(" + ");
+    }
+    lineItems.push({
+      catalogObjectId: item.id,
+      quantity: String(qty),
+      ...(detail ? { note: detail } : {}),
+    });
+    emailLines.push({ title: item.title, qty, price: item.price, ...(detail ? { detail } : {}) });
   }
 
   // Scheduled pickup (required when ordering outside hours; optional otherwise).
