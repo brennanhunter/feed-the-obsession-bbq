@@ -48,10 +48,10 @@ export default function ComingSoon() {
               <FaPhone className="text-brand-primary text-xl" />
               <span>Call </span>
               <a 
-                href="tel:812-205-0559" 
+                href="tel:386-507-4309" 
                 className="text-brand-primary font-bold text-xl hover:text-brand-primary transition-all"
               >
-                812-205-0559
+                386-507-4309
               </a>
               <span> - we'll tell you where to find us</span>
             </div>

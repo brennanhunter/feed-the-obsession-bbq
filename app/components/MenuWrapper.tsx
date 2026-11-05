@@ -21,7 +21,7 @@ const SECTION_NOTE: Partial<Record<MenuSection, string>> = {
   Plates: "Every plate comes with one side.",
   "Daily Specials":
     "One every weekday — $9.99. Plus 50¢ wings the first Friday of the month and a full rack for $19.99 every other Thursday.",
-  "Whole Cuts": "Order ahead — call 812-205-0559. Full rack needs 24 hours, whole brisket 3 days.",
+  "Whole Cuts": "Order ahead — call 386-507-4309. Full rack needs 24 hours, whole brisket 3 days.",
 };
 
 function ItemRow({ item }: { item: MenuItem }) {
@@ -179,8 +179,8 @@ export default function MenuWrapper({ items }: { items: MenuItem[] }) {
           </p>
           <p className="text-white/60 mb-6">
             Send us your details below, or call{" "}
-            <a href="tel:812-205-0559" className="text-brand-primary font-semibold hover:opacity-80">
-              812-205-0559
+            <a href="tel:386-507-4309" className="text-brand-primary font-semibold hover:opacity-80">
+              386-507-4309
             </a>
             .
           </p>

@@ -33,8 +33,8 @@ export default function Carousel() {
         <div className="h-screen relative">
           <div className="absolute top-0 left-0 w-full h-full">
             <Image
-              src="/storefront.jpeg"
-              alt="Feed The Obsession BBQ storefront and patio in DeLand, FL"
+              src="/pictures/hero/ribs-on-the-smoker.jpg"
+              alt="Racks of seasoned ribs smoking on the pit at Feed The Obsession BBQ in DeLand, FL"
               fill
               priority
               className="object-cover"
@@ -77,8 +77,8 @@ export default function Carousel() {
         <div className="h-screen relative">
           <div className="absolute top-0 left-0 w-full h-full">
             <Image
-              src="/pictures/business/FullSetupSmokerAndTent.jpg"
-              alt="Full BBQ Setup"
+              src="/pictures/hero/sliced-brisket.jpg"
+              alt="Sliced wood-smoked brisket with a deep smoke ring, served with rolls and potatoes"
               fill
               className="object-cover"
             />

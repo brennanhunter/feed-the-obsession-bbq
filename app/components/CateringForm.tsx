@@ -52,7 +52,7 @@ export default function CateringForm() {
         <p className="text-2xl font-display tracking-wider text-brand-primary mb-2">Got it! 🍖</p>
         <p className="text-white/80">
           Thanks — we&apos;ll be in touch shortly about your event. For anything urgent, call{" "}
-          <a href="tel:812-205-0559" className="text-brand-primary font-semibold">812-205-0559</a>.
+          <a href="tel:386-507-4309" className="text-brand-primary font-semibold">386-507-4309</a>.
         </p>
       </div>
     );

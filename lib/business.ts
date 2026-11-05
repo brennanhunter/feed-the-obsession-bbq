@@ -11,8 +11,8 @@ export const business = {
   url: "https://feedtheobsessionbbq.com",
   tagline: "Veteran-Owned Wood-Smoked BBQ in DeLand, FL",
 
-  phone: "812-205-0559",
-  phoneHref: "tel:812-205-0559",
+  phone: "386-507-4309",
+  phoneHref: "tel:386-507-4309",
   email: "contact@ftobbq.com",
   emailHref: "mailto:contact@ftobbq.com",
 
