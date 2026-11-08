@@ -97,7 +97,7 @@ export default function Checkout({ onDone }: { onDone?: () => void }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           sourceId: result.token,
-          items: items.map((i) => ({ id: i.id, quantity: i.qty, proteins: i.proteins })),
+          items: items.map((i) => ({ id: i.id, quantity: i.qty, proteins: i.proteins, side: i.side })),
           channel,
           table: channel === "DINE_IN" ? table.trim() : undefined,
           name: name.trim(),
@@ -227,27 +227,27 @@ export default function Checkout({ onDone }: { onDone?: () => void }) {
           placeholder="Table number"
           value={table}
           onChange={(e) => setTable(e.target.value)}
-          className="w-full mb-3 p-2 rounded bg-black/40 border border-white/20"
+          className="w-full mb-3 p-2.5 text-base rounded bg-black/40 border border-white/20"
         />
       )}
       <input
         placeholder="Name"
         value={name}
         onChange={(e) => setName(e.target.value)}
-        className="w-full mb-3 p-2 rounded bg-black/40 border border-white/20"
+        className="w-full mb-3 p-2.5 text-base rounded bg-black/40 border border-white/20"
       />
       <input
         placeholder="Phone"
         value={phone}
         onChange={(e) => setPhone(e.target.value)}
-        className="w-full mb-3 p-2 rounded bg-black/40 border border-white/20"
+        className="w-full mb-3 p-2.5 text-base rounded bg-black/40 border border-white/20"
       />
       <input
         type="email"
         placeholder="Email (for your confirmation)"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
-        className="w-full mb-3 p-2 rounded bg-black/40 border border-white/20"
+        className="w-full mb-3 p-2.5 text-base rounded bg-black/40 border border-white/20"
       />
 
       {/* Square injects the secure card fields here (PAN never touches our server). */}

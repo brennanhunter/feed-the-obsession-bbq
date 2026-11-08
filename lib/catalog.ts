@@ -2,6 +2,7 @@
 // current FTO menu). Imported by the server pages (to render the menu) and by
 // /api/checkout (to validate ids + charge Square's price, never the browser's).
 import { square } from "./square";
+import { specialRuleFor, type SpecialRule } from "./specials";
 
 export type MenuSection =
   | "Plates"
@@ -21,12 +22,17 @@ export type MenuItem = {
   bestSeller?: boolean;
   notice?: string; // lead time / ordering rule shown under the item
   proteinPicks?: number; // 2 Meat / 3 Meat plates: how many proteins to choose
+  sidePicks?: number; // plates that come with a side (and the $3 Side itself): pick which
+  special?: SpecialRule; // Smoke Schedule items: which day(s) they can be ordered
   callToOrder?: boolean; // listed online but ordered by phone (owner's call)
 };
 
 // Proteins a customer can pick for the 2 Meat and 3 Meat plates (owner's list,
 // Oct 2026). Validated server-side at checkout.
 export const PROTEINS = ["Brisket", "Ribs", "Pulled Pork", "Sliced Pork", "Chicken"] as const;
+
+// Sides a plate can come with (printed menu, Oct 2026). Validated at checkout.
+export const SIDES = ["Beans", "Sliced Taters", "Coleslaw", "Chicken Salad", "Pitmaster's Choice"] as const;
 
 // Only this Square category is the live online menu; the account also holds old
 // event menus (OB'S, Sorry Charlie's, St. Judes) we deliberately ignore.
@@ -88,6 +94,18 @@ function noticeFor(title: string): string | undefined {
 // (owner's call, Oct 2026).
 function callToOrderFor(title: string): boolean {
   return title.toLowerCase().includes("bbq sauce");
+}
+
+// Anything sold "with a side" (and the à-la-carte Side) needs the customer to
+// say which one, or the kitchen has to guess at pickup.
+function sidePicksFor(title: string, description: string): number | undefined {
+  const t = title.toLowerCase();
+  const text = `${t} ${description.toLowerCase()}`;
+  if (t.includes("no side") || t.includes("sampler") || t.includes("full rack")) return undefined;
+  if (t.trim() === "side") return 1;
+  if (t.includes("plate")) return 1;
+  if (/\bsides?\b/.test(text)) return 1;
+  return undefined;
 }
 
 function proteinPicksFor(title: string): number | undefined {
@@ -196,6 +214,8 @@ export async function getMenu(): Promise<MenuItem[]> {
         ...(BEST_SELLERS.includes(baseTitle.toLowerCase()) ? { bestSeller: true } : {}),
         ...(notice ? { notice } : {}),
         ...(proteinPicksFor(baseTitle) ? { proteinPicks: proteinPicksFor(baseTitle) } : {}),
+        ...(sidePicksFor(baseTitle, description) ? { sidePicks: sidePicksFor(baseTitle, description) } : {}),
+        ...(specialRuleFor(baseTitle) ? { special: specialRuleFor(baseTitle) } : {}),
         ...(callToOrderFor(baseTitle) ? { callToOrder: true } : {}),
       });
     }

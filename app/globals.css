@@ -30,3 +30,8 @@ body {
     letter-spacing: 0.05em;
   }
 }
+
+/* Never let a wide element turn the page into a horizontal scroller on phones. */
+html, body {
+  overflow-x: clip;
+}

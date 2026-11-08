@@ -9,13 +9,14 @@ export type CartItem = {
   price: number; // dollars
   qty: number;
   proteins?: string[]; // 2 Meat / 3 Meat plates only
+  side?: string; // plates with a side / the Side item
 };
 
-type AddInput = { id: string; title: string; price: number; proteins?: string[] };
+type AddInput = { id: string; title: string; price: number; proteins?: string[]; side?: string };
 
-// Same plate with different meats is a separate line.
-const keyOf = (i: { id: string; proteins?: string[] }) =>
-  i.proteins?.length ? `${i.id}|${i.proteins.join("+")}` : i.id;
+// Same plate with different meats or a different side is a separate line.
+const keyOf = (i: { id: string; proteins?: string[]; side?: string }) =>
+  [i.id, i.proteins?.length ? i.proteins.join("+") : "", i.side ?? ""].filter(Boolean).join("|");
 
 type Ctx = {
   items: CartItem[];
@@ -42,7 +43,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         setItems(
           parsed
             .filter((i): i is CartItem & Partial<CartItem> => Boolean(i && i.id))
-            .map((i) => ({ ...i, key: i.key ?? keyOf({ id: i.id, proteins: i.proteins }) }))
+            .map((i) => ({ ...i, key: i.key ?? keyOf({ id: i.id, proteins: i.proteins, side: i.side }) }))
         );
       }
     } catch {
@@ -73,6 +74,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
               price: i.price,
               qty: 1,
               ...(i.proteins?.length ? { proteins: i.proteins } : {}),
+              ...(i.side ? { side: i.side } : {}),
             },
           ];
     });

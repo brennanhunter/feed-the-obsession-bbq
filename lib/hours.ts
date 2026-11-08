@@ -58,6 +58,12 @@ function etToDate(y: number, mo: number, d: number, h: number, mi: number) {
   return new Date(guess.getTime() - etOffsetMs(guess));
 }
 
+/** Calendar parts of a moment in the shop's timezone (for day-based menu rules). */
+export function getETDateParts(date: Date = new Date()) {
+  const p = partsInTZ(date, { weekday: "long", year: "numeric", month: "2-digit", day: "2-digit" });
+  return { weekday: p.weekday, year: +p.year, month: +p.month, day: +p.day };
+}
+
 export function getOpenStatus(): { open: boolean; label: string } {
   const now = nowET();
   const today = business.hours.find((h) => h.days.includes(now.weekday));

@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { square, LOCATION_ID } from "@/lib/square";
-import { getMenuMap, PROTEINS } from "@/lib/catalog";
+import { getMenuMap, PROTEINS, SIDES } from "@/lib/catalog";
+import { isSpecialAvailable, specialLabel } from "@/lib/specials";
 import { sendEmail } from "@/lib/mailer";
 import { orderConfirmationEmail, type OrderEmailLine } from "@/lib/order-email";
 import { orderNotifyEmail } from "@/lib/order-notify";
@@ -10,7 +11,7 @@ import { business } from "@/lib/business";
 // Browser sends only Square catalog ids + quantities. The server validates each
 // id against the live McSorleys menu and lets Square price the order from the
 // catalog — so a tampered request can never change what gets charged.
-type CartLine = { id: string; quantity: number; proteins?: string[] };
+type CartLine = { id: string; quantity: number; proteins?: string[]; side?: string };
 type Body = {
   sourceId: string;
   items: CartLine[];
@@ -42,6 +43,21 @@ export async function POST(req: Request) {
 
   const email = body.email.trim();
 
+  // Scheduled pickup (required when ordering outside hours; optional otherwise).
+  let scheduleType: "ASAP" | "SCHEDULED" = "ASAP";
+  let pickupAt: string | undefined;
+  if (body.pickupAt) {
+    const d = new Date(body.pickupAt);
+    const ms = d.getTime();
+    if (isNaN(ms) || ms < Date.now() - 60_000 || ms > Date.now() + 8 * 86_400_000) {
+      return new Response("Please choose a valid pickup time", { status: 400 });
+    }
+    scheduleType = "SCHEDULED";
+    pickupAt = d.toISOString();
+  }
+  const pickupLabel = pickupAt ? formatPickupLabel(pickupAt) : "ASAP";
+  const servedAt = pickupAt ? new Date(pickupAt) : new Date();
+
   // Validate every cart line against the live menu, then reference the catalog
   // object so Square applies the correct price and any configured tax. We also
   // capture titles/prices here to build the confirmation email.
@@ -71,6 +87,20 @@ export async function POST(req: Request) {
       }
       detail = picks.join(" + ");
     }
+    // Smoke Schedule items only on their day (checked against the pickup day).
+    if (item.special && !isSpecialAvailable(item.special, servedAt)) {
+      return new Response(`${item.title} is ${specialLabel(item.special).toLowerCase()} — not available for that pickup time`, {
+        status: 400,
+      });
+    }
+    // Plates with a side: the kitchen needs to know which one.
+    if (item.sidePicks) {
+      const side = String(line.side ?? "");
+      if (!(SIDES as readonly string[]).includes(side)) {
+        return new Response(`Please pick a side for the ${item.title}`, { status: 400 });
+      }
+      detail = [detail, `Side: ${side}`].filter(Boolean).join(" · ");
+    }
     lineItems.push({
       catalogObjectId: item.id,
       quantity: String(qty),
@@ -78,20 +108,6 @@ export async function POST(req: Request) {
     });
     emailLines.push({ title: item.title, qty, price: item.price, ...(detail ? { detail } : {}) });
   }
-
-  // Scheduled pickup (required when ordering outside hours; optional otherwise).
-  let scheduleType: "ASAP" | "SCHEDULED" = "ASAP";
-  let pickupAt: string | undefined;
-  if (body.pickupAt) {
-    const d = new Date(body.pickupAt);
-    const ms = d.getTime();
-    if (isNaN(ms) || ms < Date.now() - 60_000 || ms > Date.now() + 8 * 86_400_000) {
-      return new Response("Please choose a valid pickup time", { status: 400 });
-    }
-    scheduleType = "SCHEDULED";
-    pickupAt = d.toISOString();
-  }
-  const pickupLabel = pickupAt ? formatPickupLabel(pickupAt) : "ASAP";
 
   const channelNote =
     body.channel === "DINE_IN"
