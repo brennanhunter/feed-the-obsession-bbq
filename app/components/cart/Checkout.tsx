@@ -28,7 +28,7 @@ declare global {
   }
 }
 
-export default function Checkout({ onDone }: { onDone?: () => void }) {
+export default function Checkout({ onDone, instructions }: { onDone?: () => void; instructions?: string }) {
   const { items, totalCents, clear } = useCart();
   const [channel, setChannel] = useState<"TAKE_OUT" | "DINE_IN">("TAKE_OUT");
   const [table, setTable] = useState("");
@@ -104,6 +104,7 @@ export default function Checkout({ onDone }: { onDone?: () => void }) {
           phone: phone.trim(),
           email: email.trim(),
           pickupAt: pickup === "asap" ? undefined : pickup,
+          instructions: instructions?.trim() || undefined,
         }),
       });
       if (!res.ok) throw new Error((await res.text()) || "Payment failed.");
@@ -175,7 +176,6 @@ export default function Checkout({ onDone }: { onDone?: () => void }) {
           </p>
         )}
         <p className="text-white/70">⏱️ Most orders ready in ~15–20 min</p>
-        <p className="text-white/70">📍 Pickup at {business.address.full}</p>
         <p className="text-white/70">✉️ Email confirmation sent instantly</p>
       </div>
 
@@ -251,7 +251,8 @@ export default function Checkout({ onDone }: { onDone?: () => void }) {
       />
 
       {/* Square injects the secure card fields here (PAN never touches our server). */}
-      <div id="card-container" className="mb-4 p-3 rounded bg-white" />
+      <p className="text-sm text-white/70 mb-1.5">Card details</p>
+      <div id="card-container" className="mb-4 p-3 rounded-xl bg-white" />
 
       {error && <p className="mb-3 text-red-400 text-sm">{error}</p>}
 
@@ -263,7 +264,11 @@ export default function Checkout({ onDone }: { onDone?: () => void }) {
       >
         {status === "paying" ? "Processing…" : `Pay $${(totalCents / 100).toFixed(2)}`}
       </button>
-      <p className="mt-3 text-xs text-white/40 text-center">Secure card payment by Square.</p>
+      <p className="mt-3 text-xs text-white/50 text-center leading-relaxed">
+        🔒 Secure checkout by Square. Your card details go straight to Square and never touch our servers.
+        <br />
+        Questions? Call <a href={business.phoneHref} className="text-brand-primary font-semibold">{business.phone}</a>.
+      </p>
     </div>
   );
 }

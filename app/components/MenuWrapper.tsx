@@ -53,7 +53,7 @@ function Chips({
   );
 }
 
-function ItemRow({ item }: { item: MenuItem }) {
+export function ItemRow({ item }: { item: MenuItem }) {
   const { add } = useCart();
   // 2 Meat / 3 Meat plates: the customer picks their proteins before adding.
   const need = item.proteinPicks ?? 0;

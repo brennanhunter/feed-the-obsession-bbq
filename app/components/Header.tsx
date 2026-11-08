@@ -39,7 +39,13 @@ export default function Header({ overlayLogo = false }: { overlayLogo?: boolean 
         </nav>
 
         {/* Right Side */}
-        <div className="flex gap-x-4 items-center">
+        <div className="flex gap-x-3 sm:gap-x-4 items-center">
+          <Link
+            href="/menu"
+            className="inline-flex items-center px-4 py-2 sm:px-6 sm:py-2.5 rounded-full bg-brand-primary text-white font-bold uppercase tracking-wide text-sm sm:text-base hover:opacity-80 transition-all shadow-md"
+          >
+            Order Now
+          </Link>
           {/* BIKE WEEK - uncomment for next bike week
           <button
             onClick={() => window.dispatchEvent(new Event('open-bike-week-modal'))}

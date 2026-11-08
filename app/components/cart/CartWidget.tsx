@@ -1,15 +1,18 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { motion, useAnimationControls } from "framer-motion";
 import { useCart } from "./CartContext";
-import Checkout from "./Checkout";
 
+// Floating "View Order" pill. Checkout itself lives on /order (a full page with
+// the pickup details, order review and payment), not in a drawer.
 export default function CartWidget() {
-  const { items, count, totalCents, setQty, remove } = useCart();
-  const [open, setOpen] = useState(false);
+  const { count } = useCart();
+  const pathname = usePathname();
 
-  // Pop the cart button whenever the item count goes up, so adding is obvious.
+  // Pop whenever the item count goes up, so adding is obvious.
   const controls = useAnimationControls();
   const prevCount = useRef(count);
   useEffect(() => {
@@ -19,92 +22,29 @@ export default function CartWidget() {
     prevCount.current = count;
   }, [count, controls]);
 
+  if (count === 0 || pathname === "/order") return null;
+
   return (
-    <>
-      {/* Floating cart button — only appears once there's something to order,
-          so it doesn't compete with the hero's CTA on an empty cart. */}
-      {count > 0 && (
-        <motion.button
-          type="button"
-          onClick={() => setOpen(true)}
-          animate={controls}
-          whileHover={{ scale: 1.05 }}
-          className="fixed bottom-[max(1.5rem,env(safe-area-inset-bottom))] right-6 z-[70] flex items-center gap-2 px-5 py-3 rounded-full bg-brand-primary text-white font-bold shadow-lg"
+    <motion.div
+      animate={controls}
+      whileHover={{ scale: 1.05 }}
+      className="fixed bottom-[max(1.5rem,env(safe-area-inset-bottom))] right-6 z-[70]"
+    >
+      <Link
+        href="/order"
+        className="flex items-center gap-2 px-5 py-3 rounded-full bg-brand-primary text-white font-bold shadow-lg"
+      >
+        🛒 View Order
+        <motion.span
+          key={count}
+          initial={{ scale: 0.4 }}
+          animate={{ scale: 1 }}
+          transition={{ type: "spring", stiffness: 600, damping: 15 }}
+          className="ml-1 bg-white text-brand-primary rounded-full px-2 text-sm font-bold"
         >
-          🛒 View Order
-          <motion.span
-            key={count}
-            initial={{ scale: 0.4 }}
-            animate={{ scale: 1 }}
-            transition={{ type: "spring", stiffness: 600, damping: 15 }}
-            className="ml-1 bg-white text-brand-primary rounded-full px-2 text-sm font-bold"
-          >
-            {count}
-          </motion.span>
-        </motion.button>
-      )}
-
-      {/* Drawer */}
-      {open && (
-        <div className="fixed inset-0 z-[80]">
-          <div className="absolute inset-0 bg-black/60" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-0 h-full w-full max-w-md bg-brand-secondary text-white shadow-2xl flex flex-col">
-            <div className="flex items-center justify-between p-5 border-b border-white/10">
-              <h3 className="text-2xl font-display tracking-wider">YOUR ORDER</h3>
-              <button type="button" onClick={() => setOpen(false)} aria-label="Close cart" className="text-2xl leading-none">
-                ✕
-              </button>
-            </div>
-
-            {/* One scroll area for the items AND the checkout form, so the Pay
-                button is always reachable on a phone (it used to sit in a
-                fixed footer that ran off the bottom of the screen). */}
-            <div className="flex-1 overflow-y-auto overscroll-contain p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
-              {items.length === 0 ? (
-                <p className="text-white/60 text-center mt-10">Your cart is empty. Add some BBQ! 🍖</p>
-              ) : (
-                <ul className="flex flex-col gap-4">
-                  {items.map((i) => (
-                    <li key={i.key} className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="font-semibold">{i.title}</p>
-                        {(i.proteins || i.side) && (
-                          <p className="text-brand-primary text-sm">
-                            {[i.proteins?.join(" + "), i.side ? `Side: ${i.side}` : null].filter(Boolean).join(" · ")}
-                          </p>
-                        )}
-                        <p className="text-white/60 text-sm">${i.price.toFixed(2)} each</p>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <button type="button" onClick={() => setQty(i.key, i.qty - 1)} aria-label="Decrease" className="w-7 h-7 rounded-full border border-white/20 hover:border-brand-primary">
-                          −
-                        </button>
-                        <span className="w-6 text-center">{i.qty}</span>
-                        <button type="button" onClick={() => setQty(i.key, i.qty + 1)} aria-label="Increase" className="w-7 h-7 rounded-full border border-white/20 hover:border-brand-primary">
-                          +
-                        </button>
-                        <button type="button" onClick={() => remove(i.key)} aria-label="Remove item" className="ml-1 text-white/40 hover:text-brand-primary">
-                          ✕
-                        </button>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-
-              {items.length > 0 && (
-                <div className="mt-6 pt-5 border-t border-white/10">
-                  <div className="flex justify-between mb-4 text-lg font-bold">
-                    <span>Total</span>
-                    <span>${(totalCents / 100).toFixed(2)}</span>
-                  </div>
-                  <Checkout onDone={() => setOpen(false)} />
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-    </>
+          {count}
+        </motion.span>
+      </Link>
+    </motion.div>
   );
 }

@@ -21,6 +21,7 @@ type Body = {
   phone: string;
   email: string;
   pickupAt?: string; // ISO; when set, this is a SCHEDULED pickup
+  instructions?: string; // free-text note for the kitchen
 };
 
 const emailOk = (e: string) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e);
@@ -42,6 +43,7 @@ export async function POST(req: Request) {
     return new Response("A valid email is required for your confirmation", { status: 400 });
 
   const email = body.email.trim();
+  const instructions = String(body.instructions ?? "").trim().slice(0, 300) || undefined;
 
   // Scheduled pickup (required when ordering outside hours; optional otherwise).
   let scheduleType: "ASAP" | "SCHEDULED" = "ASAP";
@@ -113,7 +115,7 @@ export async function POST(req: Request) {
     body.channel === "DINE_IN"
       ? `DINE-IN · Table ${body.table?.trim() || "?"}`
       : "TAKE-OUT";
-  const note = `${channelNote} · Pickup: ${pickupLabel}`;
+  const note = `${channelNote} · Pickup: ${pickupLabel}${instructions ? ` · Note: ${instructions}` : ""}`.slice(0, 500);
 
   try {
     // 1) Create the order with a PICKUP fulfillment (how it reaches the kitchen).
@@ -171,6 +173,7 @@ export async function POST(req: Request) {
       channel: body.channel,
       table: body.table?.trim(),
       pickup: pickupLabel,
+      instructions,
     });
     await sendEmail({ to: email, subject, html, replyTo: business.email });
 
@@ -189,6 +192,7 @@ export async function POST(req: Request) {
       channel: body.channel,
       table: body.table?.trim(),
       pickup: pickupLabel,
+      instructions,
     });
     await sendEmail({ to: notifyTo, subject: notify.subject, html: notify.html, replyTo: email });
 
