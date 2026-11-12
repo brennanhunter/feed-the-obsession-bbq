@@ -13,6 +13,7 @@ const SECTION_LABEL: Record<MenuSection, string> = {
   Plates: "Plates",
   Combos: "Combos & Racks",
   "Daily Specials": "The Smoke Schedule",
+  "By the Pound": "By the Pound",
   "Whole Cuts": "Whole Cuts & Catering",
   Sides: "Sides",
   Extras: "Sauce & Extras",
@@ -22,6 +23,7 @@ const SECTION_NOTE: Partial<Record<MenuSection, string>> = {
   Plates: "Every plate comes with one side — pick it when you add the plate.",
   "Daily Specials":
     "One every weekday — $9.99, orderable on its day. Plus 50¢ wings the first Friday of the month and a full rack for $19.99 every other Thursday.",
+  "By the Pound": "Smoked meat by the weight, sliced to order while it lasts.",
   "Whole Cuts": "Order ahead — call 386-507-4309. Full rack needs 24 hours, whole brisket 3 days.",
 };
 

@@ -8,6 +8,7 @@ export type MenuSection =
   | "Plates"
   | "Combos"
   | "Daily Specials"
+  | "By the Pound"
   | "Whole Cuts"
   | "Sides"
   | "Extras";
@@ -42,6 +43,7 @@ export const MENU_SECTIONS: MenuSection[] = [
   "Plates",
   "Combos",
   "Daily Specials",
+  "By the Pound",
   "Whole Cuts",
   "Sides",
   "Extras",
@@ -53,6 +55,8 @@ const money = (m?: { amount?: bigint | number | null } | null) =>
 function sectionFor(name: string): MenuSection {
   const n = name.toLowerCase();
   if (n.includes("special")) return "Daily Specials";
+  // Brisket and ribs sold by weight (owner, Nov 2026).
+  if (n.includes("pound") || /\blb\b/.test(n)) return "By the Pound";
   // The full rack needs 24 hours' notice, so it lives with the whole cuts.
   if (n.startsWith("whole") || n.includes("full rack")) return "Whole Cuts";
   if (n.includes("meat") || n.includes("sampler")) return "Combos";
@@ -140,7 +144,10 @@ function describe(title: string): string {
     "whole pork butt": "Smoked whole and ready to pull.",
     "whole smoked brisket": "A full packer, smoked overnight.",
     side: "Beans, sliced potatoes, coleslaw, chicken salad, or the pitmaster's choice of the week.",
-    "16oz bbq sauce": "Sweet Heat homemade sauce. Bring the bottle back and refill for $10.",
+    "brisket by the pound": "Sliced to order off the pit. Sold by the pound.",
+    "pork ribs by the pound": "Smoked pork ribs, sold by the pound.",
+    "8oz bbq sauce": "Sweet Heat homemade sauce in an 8 oz mason jar. Bring the jar back and refill for $10.",
+    "16oz bbq sauce": "Sweet Heat homemade sauce in an 8 oz mason jar. Bring the jar back and refill for $10.",
     chicken: "Add a piece of smoked chicken to any order.",
   };
   if (map[t]) return map[t];
