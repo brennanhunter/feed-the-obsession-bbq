@@ -196,7 +196,8 @@ export default function MenuWrapper({ items }: { items: MenuItem[] }) {
           </section>
         ))}
 
-        {/* Google review offer (owner's sheet, Oct 2026) */}
+        {/* Google review ask. No discount or incentive: Google's review policy
+            forbids offering anything for reviews (flagged Nov 2026). */}
         <section
           id="review-offer"
           className="rounded-2xl border border-brand-primary/60 bg-brand-primary/10 p-6 md:p-8 text-center"
@@ -205,9 +206,8 @@ export default function MenuWrapper({ items }: { items: MenuItem[] }) {
             Love it? Tell Google.
           </h3>
           <p className="mt-3 text-white/80 max-w-xl mx-auto">
-            Leave us a Google review and take <span className="font-bold text-white">10% off</span> your
-            next visit — <span className="font-bold text-white">15%</span> with a photo,{" "}
-            <span className="font-bold text-white">20%</span> with a video. Show it at the counter.
+            A quick Google review helps more folks find the smoke. Photos welcome. Thanks for
+            spreading the word.
           </p>
           <a
             href={business.maps.review}
