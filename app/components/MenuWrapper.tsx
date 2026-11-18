@@ -74,7 +74,8 @@ export function ItemRow({ item }: { item: MenuItem }) {
     return () => clearInterval(id);
   }, [item.special]);
 
-  const ready = available && (need === 0 || picks.length === need) && (!needSide || side !== "");
+  const orderable = available && !item.soldOut;
+  const ready = orderable && (need === 0 || picks.length === need) && (!needSide || side !== "");
   const toggle = (p: string) =>
     setPicks((prev) =>
       prev.includes(p) ? prev.filter((x) => x !== p) : prev.length < need ? [...prev, p] : prev
@@ -95,7 +96,7 @@ export function ItemRow({ item }: { item: MenuItem }) {
   if (needSide && !side) missing.push("a side");
 
   return (
-    <div className={`py-3 border-b border-white/10 ${available ? "" : "opacity-60"}`}>
+    <div className={`py-3 border-b border-white/10 ${orderable ? "" : "opacity-60"}`}>
       {/* Title wraps on narrow screens; price + button never leave the viewport. */}
       <div className="flex items-start gap-3">
         <div className="min-w-0 flex-1 flex flex-wrap items-baseline gap-x-3 gap-y-1">
@@ -103,6 +104,11 @@ export function ItemRow({ item }: { item: MenuItem }) {
           {item.bestSeller && (
             <span className="shrink-0 rounded-full bg-brand-primary/20 text-brand-primary text-[11px] font-bold uppercase tracking-wider px-2 py-0.5">
               Best Seller
+            </span>
+          )}
+          {item.soldOut && (
+            <span className="shrink-0 rounded-full bg-white/10 text-white/70 text-[11px] font-bold uppercase tracking-wider px-2 py-0.5">
+              Sold out
             </span>
           )}
           <span className="hidden sm:block flex-1 border-b border-dotted border-white/25 translate-y-[-4px]" />
@@ -123,7 +129,15 @@ export function ItemRow({ item }: { item: MenuItem }) {
               disabled={!ready}
               className="px-4 py-1.5 rounded-full bg-brand-primary text-white text-sm font-semibold hover:opacity-80 transition-all disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
               aria-label={`Add ${item.title} to order`}
-              title={!available && item.special ? specialLabel(item.special) : missing.length ? `Pick ${missing.join(" and ")}` : undefined}
+              title={
+                item.soldOut
+                  ? "Sold out right now"
+                  : !available && item.special
+                    ? specialLabel(item.special)
+                    : missing.length
+                      ? `Pick ${missing.join(" and ")}`
+                      : undefined
+              }
             >
               Add +
             </button>
@@ -139,7 +153,7 @@ export function ItemRow({ item }: { item: MenuItem }) {
           {available ? `On today — ${specialLabel(item.special)}` : `Not today — ${specialLabel(item.special)}`}
         </p>
       )}
-      {available && need > 0 && (
+      {orderable && need > 0 && (
         <Chips
           label={`Pick ${need} meats${picks.length < need ? ` — ${need - picks.length} to go` : ""}:`}
           options={PROTEINS}
@@ -147,7 +161,7 @@ export function ItemRow({ item }: { item: MenuItem }) {
           onToggle={toggle}
         />
       )}
-      {available && needSide && (
+      {orderable && needSide && (
         <Chips
           label={side ? `Side: ${side}` : "Pick your side:"}
           options={SIDES}

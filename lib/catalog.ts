@@ -1,7 +1,7 @@
 // Live menu, sourced from the Square Catalog (the "McSorleys" category = the
 // current FTO menu). Imported by the server pages (to render the menu) and by
 // /api/checkout (to validate ids + charge Square's price, never the browser's).
-import { square } from "./square";
+import { square, LOCATION_ID } from "./square";
 import { specialRuleFor, type SpecialRule } from "./specials";
 
 export type MenuSection =
@@ -26,6 +26,7 @@ export type MenuItem = {
   sidePicks?: number; // plates that come with a side (and the $3 Side itself): pick which
   special?: SpecialRule; // Smoke Schedule items: which day(s) they can be ordered
   callToOrder?: boolean; // listed online but ordered by phone (owner's call)
+  soldOut?: boolean; // the owner's "Sold out" toggle in Square, for the shop location
 };
 
 // Proteins a customer can pick for the 2 Meat and 3 Meat plates (owner's list,
@@ -206,6 +207,12 @@ export async function getMenu(): Promise<MenuItem[]> {
           : baseTitle;
       const section = sectionFor(baseTitle);
       const notice = noticeFor(baseTitle);
+      // "Sold out" is set per location in Square (POS / Dashboard). Keep the item
+      // listed so customers see it exists, but it can't be added or checked out.
+      const soldOut = (variation.itemVariationData?.locationOverrides || []).some(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (l: any) => l?.locationId === LOCATION_ID && l?.soldOut === true
+      );
       // The Square description may carry the lead time too; the notice line
       // below the item already says it, so drop that sentence from the blurb.
       const description = (d.description || describe(baseTitle))
@@ -224,6 +231,7 @@ export async function getMenu(): Promise<MenuItem[]> {
         ...(sidePicksFor(baseTitle, description) ? { sidePicks: sidePicksFor(baseTitle, description) } : {}),
         ...(specialRuleFor(baseTitle) ? { special: specialRuleFor(baseTitle) } : {}),
         ...(callToOrderFor(baseTitle) ? { callToOrder: true } : {}),
+        ...(soldOut ? { soldOut: true } : {}),
       });
     }
   }

@@ -81,6 +81,12 @@ export async function POST(req: Request) {
     if (!item || !Number.isFinite(qty) || qty < 1) {
       return new Response("Invalid item in cart", { status: 400 });
     }
+    // The owner's "Sold out" toggle in Square wins over whatever is in the cart.
+    if (item.soldOut) {
+      return new Response(`${item.title} is sold out right now — please remove it from your order`, {
+        status: 400,
+      });
+    }
     // 2 Meat / 3 Meat plates must carry exactly N picks from the owner's list;
     // they ride to the kitchen as the line-item note on the Square ticket.
     const picks = Array.isArray(line.proteins) ? line.proteins.map(String) : [];

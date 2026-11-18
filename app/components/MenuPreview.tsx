@@ -6,7 +6,7 @@ import type { MenuItem } from "@/lib/catalog";
 
 // Home-page teaser: a few signature plates that drive to the full /menu page.
 export default function MenuPreview({ items }: { items: MenuItem[] }) {
-  const featured = items.filter((i) => i.section === "Plates").slice(0, 5);
+  const featured = items.filter((i) => i.section === "Plates" && !i.soldOut).slice(0, 5);
   return (
     <div id="menu" className="container mx-auto max-w-3xl px-4 mb-16 py-20">
       <motion.div
