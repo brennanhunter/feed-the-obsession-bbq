@@ -15,13 +15,19 @@ const HEAVY = "'Arial Black', 'Arial Narrow Bold', Impact, Helvetica, sans-serif
 export function orderConfirmationEmail(opts: {
   name: string;
   items: OrderEmailLine[];
-  totalCents: number;
+  totalCents: number; // what the card was charged (food + tax + tip)
+  subtotalCents?: number; // food only; breakdown rows appear when there's a tax or tip
+  taxCents?: number;
+  tipCents?: number;
   channel: "DINE_IN" | "TAKE_OUT";
   table?: string;
   pickup?: string; // "ASAP" or a scheduled-time label
   instructions?: string;
 }): { subject: string; html: string } {
   const { name, items, totalCents, channel, table, pickup, instructions } = opts;
+  const taxCents = opts.taxCents ?? 0;
+  const tipCents = opts.tipCents ?? 0;
+  const foodCents = opts.subtotalCents ?? totalCents - taxCents - tipCents;
   const fulfillment =
     channel === "DINE_IN" ? `Dine-in${table ? ` · Table ${esc(table)}` : ""}` : "Take-out (pickup)";
   const logo = `${business.url}/logo-red.png`;
@@ -47,6 +53,19 @@ export function orderConfirmationEmail(opts: {
     )
     .join("");
 
+  const subRow = (label: string, cents: number) => `
+          <tr>
+            <td style="padding:5px 0 0;font-family:Arial,Helvetica,sans-serif;color:#5b544a;font-size:14px">${label}</td>
+            <td></td>
+            <td style="padding:5px 0 0;font-family:Arial,Helvetica,sans-serif;color:#5b544a;font-size:14px;text-align:right">${money(cents / 100)}</td>
+          </tr>`;
+  const breakdown =
+    taxCents > 0 || tipCents > 0
+      ? subRow("Food", foodCents) +
+        (taxCents > 0 ? subRow("Sales tax", taxCents) : "") +
+        (tipCents > 0 ? subRow("Tip", tipCents) : "")
+      : "";
+
   const html = `
   <div style="background:${BLACK};margin:0;padding:24px 0;font-family:Arial,Helvetica,sans-serif">
     <div style="max-width:600px;margin:0 auto;background:${CREAM};border-radius:4px;overflow:hidden">
@@ -69,7 +88,9 @@ export function orderConfirmationEmail(opts: {
           ORDER CONFIRMED — THANKS, ${esc(name).toUpperCase()}! 🍖
         </h1>
         <p style="margin:0 0 22px;color:#5b544a;font-size:15px;line-height:1.5">
-          We got your order and it&rsquo;s headed for the smoker. Here&rsquo;s what&rsquo;s on the ticket:
+          We got your order and it&rsquo;s headed for the smoker.${
+            tipCents > 0 ? " And thank you for the tip &mdash; the crew appreciates it." : ""
+          } Here&rsquo;s what&rsquo;s on the ticket:
         </p>
 
         <div style="font-family:${HEAVY};font-size:19px;letter-spacing:1px;color:${INK};border-bottom:3px solid ${RED};padding-bottom:6px;margin-bottom:6px">
@@ -77,10 +98,10 @@ export function orderConfirmationEmail(opts: {
         </div>
         <table style="width:100%;border-collapse:collapse">${rows}
           <tr>
-            <td colspan="3" style="padding:14px 0 0;border-top:2px solid ${INK}"></td>
-          </tr>
+            <td colspan="3" style="padding:${breakdown ? "8px" : "14px"} 0 0;border-top:2px solid ${INK}"></td>
+          </tr>${breakdown}
           <tr>
-            <td style="font-family:${HEAVY};font-size:18px;color:${INK}">TOTAL</td>
+            <td style="padding-top:${breakdown ? "8px" : "0"};font-family:${HEAVY};font-size:18px;color:${INK}">TOTAL</td>
             <td></td>
             <td style="font-family:${HEAVY};font-size:18px;color:${RED};text-align:right">${money(totalCents / 100)}</td>
           </tr>

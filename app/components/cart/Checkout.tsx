@@ -28,8 +28,17 @@ declare global {
   }
 }
 
-export default function Checkout({ onDone, instructions }: { onDone?: () => void; instructions?: string }) {
+export default function Checkout({
+  onDone,
+  instructions,
+  tipCents = 0,
+}: {
+  onDone?: () => void;
+  instructions?: string;
+  tipCents?: number; // optional tip picked on the order page, charged on top of the food
+}) {
   const { items, totalCents, clear } = useCart();
+  const [tipped, setTipped] = useState(false); // remembered past clear() for the thank-you
   const [channel, setChannel] = useState<"TAKE_OUT" | "DINE_IN">("TAKE_OUT");
   const [table, setTable] = useState("");
   const [name, setName] = useState("");
@@ -105,9 +114,11 @@ export default function Checkout({ onDone, instructions }: { onDone?: () => void
           email: email.trim(),
           pickupAt: pickup === "asap" ? undefined : pickup,
           instructions: instructions?.trim() || undefined,
+          tipCents: tipCents > 0 ? tipCents : undefined,
         }),
       });
       if (!res.ok) throw new Error((await res.text()) || "Payment failed.");
+      setTipped(tipCents > 0);
       clear();
       setStatus("done");
     } catch (e) {
@@ -121,7 +132,10 @@ export default function Checkout({ onDone, instructions }: { onDone?: () => void
     return (
       <div className="text-center py-8">
         <p className="text-2xl text-green-400 font-bold mb-2">Order placed! 🍖</p>
-        <p className="text-white/70">We&apos;ll get it on the smoker — a confirmation is on its way to your email. See you soon!</p>
+        <p className="text-white/70">
+          We&apos;ll get it on the smoker — a confirmation is on its way to your email.
+          {tipped ? " And thanks for the tip, the crew appreciates it." : ""} See you soon!
+        </p>
         {onDone && (
           <button onClick={onDone} className="mt-6 px-6 py-2 rounded-full bg-brand-primary">
             Close
@@ -262,7 +276,7 @@ export default function Checkout({ onDone, instructions }: { onDone?: () => void
         disabled={status === "paying" || items.length === 0}
         className="w-full py-3 rounded-full bg-brand-primary font-bold disabled:opacity-50"
       >
-        {status === "paying" ? "Processing…" : `Pay $${(totalCents / 100).toFixed(2)}`}
+        {status === "paying" ? "Processing…" : `Pay $${((totalCents + tipCents) / 100).toFixed(2)}`}
       </button>
       <p className="mt-3 text-xs text-white/50 text-center leading-relaxed">
         🔒 Secure checkout by Square. Your card details go straight to Square and never touch our servers.

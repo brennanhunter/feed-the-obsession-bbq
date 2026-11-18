@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useCart } from "./CartContext";
 import Checkout from "./Checkout";
+import TipPicker from "./TipPicker";
+import { NO_TIP, tipCentsFor, type TipChoice } from "@/lib/tips";
 import { ItemRow } from "../MenuWrapper";
 import { business } from "@/lib/business";
 import { getOpenStatus } from "@/lib/hours";
@@ -41,6 +43,10 @@ function PickupCard() {
 export default function OrderPage({ extras }: { extras: MenuItem[] }) {
   const { items, totalCents, setQty, remove } = useCart();
   const [instructions, setInstructions] = useState("");
+  // Optional tip, charged on top of the food (Square tip_money).
+  const [tip, setTip] = useState<TipChoice>(NO_TIP);
+  const tipCents = tipCentsFor(tip, totalCents);
+  const chargeCents = totalCents + tipCents;
   const [done, setDone] = useState(false);
   // Avoid a flash of "empty" before the saved cart loads from localStorage.
   const [hydrated, setHydrated] = useState(false);
@@ -165,13 +171,30 @@ export default function OrderPage({ extras }: { extras: MenuItem[] }) {
             {!done && (
               <>
                 <h2 id="pay-h" className="font-display text-xl tracking-wider uppercase">2. Pickup &amp; payment</h2>
-                <div className="mt-4 mb-5 flex justify-between text-lg font-bold border-b border-white/10 pb-4">
-                  <span>Total</span>
-                  <span>{money(totalCents)}</span>
+                <div className="mt-4">
+                  <TipPicker subtotalCents={totalCents} value={tip} onChange={setTip} />
                 </div>
+                <dl className="mt-4 mb-5 border-b border-white/10 pb-4 space-y-1">
+                  {tipCents > 0 && (
+                    <>
+                      <div className="flex justify-between text-sm text-white/70">
+                        <dt>Food</dt>
+                        <dd>{money(totalCents)}</dd>
+                      </div>
+                      <div className="flex justify-between text-sm text-white/70">
+                        <dt>Tip</dt>
+                        <dd>{money(tipCents)}</dd>
+                      </div>
+                    </>
+                  )}
+                  <div className="flex justify-between text-lg font-bold pt-1">
+                    <dt>Total</dt>
+                    <dd>{money(chargeCents)}</dd>
+                  </div>
+                </dl>
               </>
             )}
-            <Checkout instructions={instructions} onDone={() => setDone(true)} />
+            <Checkout instructions={instructions} tipCents={tipCents} onDone={() => setDone(true)} />
           </section>
         </aside>
       </div>
@@ -182,7 +205,7 @@ export default function OrderPage({ extras }: { extras: MenuItem[] }) {
           <div className="container mx-auto flex items-center justify-between gap-4">
             <div>
               <p className="text-xs uppercase tracking-wider text-white/50">Total</p>
-              <p className="text-xl font-bold">{money(totalCents)}</p>
+              <p className="text-xl font-bold">{money(chargeCents)}</p>
             </div>
             <a href="#payment" className="px-7 py-3 rounded-full bg-brand-primary font-bold hover:opacity-80 transition-all">
               Checkout →

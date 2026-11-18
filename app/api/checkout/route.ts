@@ -7,6 +7,7 @@ import { orderConfirmationEmail, type OrderEmailLine } from "@/lib/order-email";
 import { orderNotifyEmail } from "@/lib/order-notify";
 import { formatPickupLabel } from "@/lib/hours";
 import { business } from "@/lib/business";
+import { MAX_TIP_CENTS } from "@/lib/tips";
 
 // Browser sends only Square catalog ids + quantities. The server validates each
 // id against the live McSorleys menu and lets Square price the order from the
@@ -22,6 +23,7 @@ type Body = {
   email: string;
   pickupAt?: string; // ISO; when set, this is a SCHEDULED pickup
   instructions?: string; // free-text note for the kitchen
+  tipCents?: number; // optional tip, integer cents, charged on top of the order
 };
 
 const emailOk = (e: string) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e);
@@ -44,6 +46,13 @@ export async function POST(req: Request) {
 
   const email = body.email.trim();
   const instructions = String(body.instructions ?? "").trim().slice(0, 300) || undefined;
+
+  // Optional tip. Square takes it as tip_money on the payment, separate from the
+  // order total (which must still equal what Square priced the food at).
+  const tipCents = body.tipCents == null ? 0 : Number(body.tipCents);
+  if (!Number.isInteger(tipCents) || tipCents < 0 || tipCents > MAX_TIP_CENTS) {
+    return new Response(`Tip must be between $0 and $${MAX_TIP_CENTS / 100}`, { status: 400 });
+  }
 
   // Scheduled pickup (required when ordering outside hours; optional otherwise).
   let scheduleType: "ASAP" | "SCHEDULED" = "ASAP";
@@ -153,14 +162,18 @@ export async function POST(req: Request) {
     if (!orderId || amount == null) {
       return new Response("Could not create the order", { status: 502 });
     }
+    const foodCents = Number(amount);
+    const taxCents = Number(order?.totalTaxMoney?.amount ?? 0); // 0 today; shown if ever enabled
+    const chargedCents = foodCents + tipCents;
 
-    // 2) Charge the card for Square's computed total and apply it to the order.
+    // 2) Charge the card for Square's computed total (plus any tip) and apply it to the order.
     await square.payments.create({
       idempotencyKey: randomUUID(),
       sourceId: body.sourceId,
       orderId,
       locationId: LOCATION_ID,
       amountMoney: { amount, currency: "USD" },
+      ...(tipCents > 0 ? { tipMoney: { amount: BigInt(tipCents), currency: "USD" } } : {}),
       buyerEmailAddress: email, // Square records it (and can send its own receipt)
       autocomplete: true,
     });
@@ -169,7 +182,10 @@ export async function POST(req: Request) {
     const { subject, html } = orderConfirmationEmail({
       name: body.name.trim(),
       items: emailLines,
-      totalCents: Number(amount),
+      totalCents: chargedCents,
+      subtotalCents: foodCents - taxCents,
+      taxCents,
+      tipCents,
       channel: body.channel,
       table: body.table?.trim(),
       pickup: pickupLabel,
@@ -188,7 +204,10 @@ export async function POST(req: Request) {
       email,
       phone: body.phone.trim(),
       items: emailLines,
-      totalCents: Number(amount),
+      totalCents: chargedCents,
+      subtotalCents: foodCents - taxCents,
+      taxCents,
+      tipCents,
       channel: body.channel,
       table: body.table?.trim(),
       pickup: pickupLabel,

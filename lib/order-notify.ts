@@ -12,7 +12,10 @@ export function orderNotifyEmail(opts: {
   email: string;
   phone: string;
   items: OrderEmailLine[];
-  totalCents: number;
+  totalCents: number; // charged to the card (food + tax + tip)
+  subtotalCents?: number; // food only (the number sales tracking cares about)
+  taxCents?: number;
+  tipCents?: number;
   channel: "DINE_IN" | "TAKE_OUT";
   table?: string;
   pickup?: string;
@@ -20,6 +23,9 @@ export function orderNotifyEmail(opts: {
 }): { subject: string; html: string } {
   const { orderId, name, email, phone, items, totalCents, channel, table, pickup, instructions } = opts;
   const total = totalCents / 100;
+  const tax = (opts.taxCents ?? 0) / 100;
+  const tip = (opts.tipCents ?? 0) / 100;
+  const food = opts.subtotalCents != null ? opts.subtotalCents / 100 : total - tax - tip;
   const fulfillment =
     channel === "DINE_IN" ? `Dine-in${table ? ` · Table ${esc(table)}` : ""}` : "Take-out";
 
@@ -43,8 +49,11 @@ export function orderNotifyEmail(opts: {
 
     <table style="width:100%;border-collapse:collapse;font-size:14px;margin-bottom:12px">
       ${rows}
-      <tr><td style="padding:10px 0 0;border-top:2px solid #111;font-weight:bold">Total</td>
-          <td style="padding:10px 0 0;border-top:2px solid #111;font-weight:bold;text-align:right">${money(total)}</td></tr>
+      <tr><td style="padding:10px 0 0;border-top:2px solid #111;font-weight:bold">Food</td>
+          <td style="padding:10px 0 0;border-top:2px solid #111;font-weight:bold;text-align:right">${money(food)}</td></tr>
+      ${tax > 0 ? `<tr><td style="padding:4px 12px 4px 0;color:#666">Sales tax</td><td style="padding:4px 0;text-align:right;color:#666">${money(tax)}</td></tr>` : ""}
+      ${tip > 0 ? `<tr><td style="padding:4px 12px 4px 0;color:#666">Tip</td><td style="padding:4px 0;text-align:right;color:#666">${money(tip)}</td></tr>` : ""}
+      ${tax > 0 || tip > 0 ? `<tr><td style="padding:6px 0 0;font-weight:bold">Charged</td><td style="padding:6px 0 0;font-weight:bold;text-align:right">${money(total)}</td></tr>` : ""}
     </table>
 
     ${instructions ? `<p style="margin:0 0 12px;padding:10px 12px;background:#fff7e6;border-left:4px solid #d4202a;font-size:14px"><strong>Kitchen note:</strong> ${esc(instructions)}</p>` : ""}
@@ -56,5 +65,6 @@ export function orderNotifyEmail(opts: {
     <p style="margin:16px 0 0;color:#999;font-size:12px">${esc(business.name)} · automated order notification</p>
   </div>`;
 
-  return { subject: `🧾 Order ${money(total)} — ${esc(name)} (${fulfillment})`, html };
+  const tipNote = tip > 0 ? ` + ${money(tip)} tip` : "";
+  return { subject: `🧾 Order ${money(food)}${tipNote} — ${esc(name)} (${fulfillment})`, html };
 }
