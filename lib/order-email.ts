@@ -124,12 +124,22 @@ export function orderConfirmationEmail(opts: {
         <div style="text-align:center">
           <a href="${business.maps.directions}" style="display:inline-block;background:${RED};color:#fff;text-decoration:none;font-family:${HEAVY};font-size:14px;letter-spacing:1px;padding:13px 30px;border-radius:999px">GET DIRECTIONS</a>
         </div>
+
+        <!-- Review ask. Neutral wording on purpose: Google's review policy bans
+             incentives AND asking only happy customers ("Love it?"). -->
+        <div style="border-top:2px dotted #c3b79c;margin-top:28px;padding-top:24px;text-align:center">
+          <div style="font-family:${HEAVY};font-size:18px;letter-spacing:.5px;color:${INK}">HOW WAS IT?</div>
+          <p style="margin:6px 0 16px;color:#5b544a;font-size:15px;line-height:1.5">
+            After you eat, a quick Google review helps us more than you know.
+            It&rsquo;s how folks around DeLand find a small, veteran-owned BBQ joint like ours.
+          </p>
+          <a href="${business.maps.review}" style="display:inline-block;background:${BLACK};color:#fff;text-decoration:none;font-family:${HEAVY};font-size:14px;letter-spacing:1px;padding:13px 30px;border-radius:999px">&#9733; LEAVE A GOOGLE REVIEW</a>
+        </div>
       </div>
 
       <!-- Footer -->
       <div style="background:${BLACK};padding:20px 24px;text-align:center">
         <p style="margin:0;color:#9b9384;font-size:12px;line-height:1.5">
-          Love it? <a href="${business.maps.review}" style="color:${RED};text-decoration:none;font-weight:bold">Leave us a Google review</a><br/>
           ${esc(business.name)} &bull; ${esc(business.address.full)}
         </p>
       </div>
