@@ -100,7 +100,13 @@ export default function OrderPage({ extras }: { extras: MenuItem[] }) {
                     <div className="min-w-0 flex-1">
                       <p className="font-semibold text-lg leading-snug">{i.title}</p>
                       {i.detail && <p className="text-brand-primary text-sm">{i.detail}</p>}
-                      <p className="text-white/50 text-sm">{money(Math.round(i.price * 100))} each</p>
+                      {i.note && <p className="text-white/70 text-sm italic">Request: {i.note}</p>}
+                      {i.leadDays && (
+                        <p className="text-white/50 text-xs uppercase tracking-wider">Order {i.leadDays} days ahead</p>
+                      )}
+                      <p className="text-white/50 text-sm">
+                        {money(Math.round(i.price * 100))} {i.unit === "lb" ? "per lb" : "each"}
+                      </p>
                       <button type="button" onClick={() => remove(i.key)} className="mt-2 text-sm text-white/40 hover:text-brand-primary">
                         Remove
                       </button>
@@ -111,7 +117,10 @@ export default function OrderPage({ extras }: { extras: MenuItem[] }) {
                         <button type="button" onClick={() => setQty(i.key, i.qty - 1)} aria-label={`Decrease ${i.title}`} className="w-9 h-9 rounded-full border border-white/20 hover:border-brand-primary text-lg">
                           −
                         </button>
-                        <span className="w-8 text-center font-semibold">{i.qty}</span>
+                        <span className="w-10 text-center font-semibold">
+                          {i.qty}
+                          {i.unit === "lb" ? " lb" : ""}
+                        </span>
                         <button type="button" onClick={() => setQty(i.key, i.qty + 1)} aria-label={`Increase ${i.title}`} className="w-9 h-9 rounded-full border border-white/20 hover:border-brand-primary text-lg">
                           +
                         </button>

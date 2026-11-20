@@ -6,6 +6,7 @@ import { business } from "@/lib/business";
 import StructuredData from "./components/StructuredData";
 import { CartProvider } from "./components/cart/CartContext";
 import CartWidget from "./components/cart/CartWidget";
+import AddedToast from "./components/cart/AddedToast";
 
 const alfaSlab = Alfa_Slab_One({
   variable: "--font-alfa",
@@ -109,6 +110,7 @@ export default function RootLayout({
         <CartProvider>
           {children}
           <CartWidget />
+          <AddedToast />
         </CartProvider>
         <Analytics />
       </body>

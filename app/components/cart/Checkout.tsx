@@ -50,12 +50,16 @@ export default function Checkout({
   const [openStatus, setOpenStatus] = useState<{ open: boolean; label: string } | null>(null);
   const [pickupOpts, setPickupOpts] = useState<{ asap: boolean; slots: PickupOption[] } | null>(null);
   const [pickup, setPickup] = useState<string>("asap"); // "asap" or a slot ISO
+  // Whole cuts in the cart push the earliest pickup out by their notice period.
+  const leadDays = items.reduce((m, i) => Math.max(m, i.leadDays ?? 0), 0);
   useEffect(() => {
     setOpenStatus(getOpenStatus());
-    const opts = getPickupOptions();
+    const opts = getPickupOptions(leadDays);
     setPickupOpts(opts);
-    setPickup(opts.asap ? "asap" : opts.slots[0]?.iso ?? "");
-  }, []);
+    setPickup((prev) =>
+      prev !== "asap" && opts.slots.some((s) => s.iso === prev) ? prev : opts.asap ? "asap" : opts.slots[0]?.iso ?? ""
+    );
+  }, [leadDays]);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const cardRef = useRef<any>(null);
   const initStarted = useRef(false); // reserve synchronously so the form attaches once
@@ -106,7 +110,7 @@ export default function Checkout({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           sourceId: result.token,
-          items: items.map((i) => ({ id: i.id, quantity: i.qty, picks: i.picks })),
+          items: items.map((i) => ({ id: i.id, quantity: i.qty, picks: i.picks, note: i.note })),
           channel,
           table: channel === "DINE_IN" ? table.trim() : undefined,
           name: name.trim(),
@@ -197,7 +201,11 @@ export default function Checkout({
       {pickupOpts && (
         <div className="mb-4">
           <label className="block text-sm mb-1.5">
-            {pickupOpts.asap ? (
+            {leadDays > 0 ? (
+              <span className="text-brand-primary font-semibold">
+                Whole cuts are smoked to order — pick a time {leadDays} or more days out
+              </span>
+            ) : pickupOpts.asap ? (
               <span className="text-white/70">Pickup time</span>
             ) : (
               <span className="text-brand-primary font-semibold">

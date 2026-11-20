@@ -22,7 +22,9 @@ export type MenuItem = {
   section: MenuSection;
   bestSeller?: boolean;
   notice?: string; // lead time / ordering rule shown under the item
-  choices?: Choice[]; // Square modifier lists on the item ("Pick your meats", "Pick your side")
+  choices?: Choice[]; // Square modifier lists on the item ("Pick your meats", "Pick your side", "Extra sauce")
+  leadDays?: number; // whole cuts: pickup must be at least this many days out
+  unit?: "lb"; // sold by the pound: quantity is pounds
   special?: SpecialRule; // Smoke Schedule items: which day(s) they can be ordered
   callToOrder?: boolean; // listed online but ordered by phone (owner's call)
   soldOut?: boolean; // the owner's "Sold out" toggle in Square, for the shop location
@@ -158,12 +160,12 @@ function plateRank(title: string): number {
 // Starred as best sellers on the owner's sheet.
 const BEST_SELLERS = ["brisket plate with 1 side", "rib plate with 1 side"];
 
-// Lead times the kitchen needs (owner, Oct 2026).
-function noticeFor(title: string): string | undefined {
-  const t = title.toLowerCase();
-  if (t.includes("full rack")) return "24 hours' notice";
-  if (t.includes("whole smoked brisket") || t === "whole brisket") return "3 days' notice";
-  if (t.includes("whole pork butt")) return "Order a day ahead";
+// Whole cuts are smoked to order: pickup at least this many days out (owner, Nov 2026).
+const WHOLE_CUT_LEAD_DAYS = 2;
+
+// Lead-time line shown under an item.
+function noticeFor(section: MenuSection): string | undefined {
+  if (section === "Whole Cuts") return `Order ${WHOLE_CUT_LEAD_DAYS} days ahead`;
   return undefined;
 }
 
@@ -315,7 +317,7 @@ export async function getMenu(): Promise<MenuItem[]> {
           ? `${baseTitle} · ${vname}`
           : baseTitle;
       const section = sectionFor(baseTitle);
-      const notice = noticeFor(baseTitle);
+      const notice = noticeFor(section);
       // "Sold out" is set per location in Square (POS / Dashboard). Keep the item
       // listed so customers see it exists, but it can't be added or checked out.
       const soldOut = (variation.itemVariationData?.locationOverrides || []).some(
@@ -337,6 +339,8 @@ export async function getMenu(): Promise<MenuItem[]> {
         ...(BEST_SELLERS.includes(baseTitle.toLowerCase()) ? { bestSeller: true } : {}),
         ...(notice ? { notice } : {}),
         ...(choices.length ? { choices } : {}),
+        ...(section === "Whole Cuts" ? { leadDays: WHOLE_CUT_LEAD_DAYS } : {}),
+        ...(section === "By the Pound" ? { unit: "lb" as const } : {}),
         ...(specialRuleFor(baseTitle) ? { special: specialRuleFor(baseTitle) } : {}),
         ...(callToOrderFor(baseTitle) ? { callToOrder: true } : {}),
         ...(soldOut ? { soldOut: true } : {}),

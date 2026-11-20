@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
 import {
   MENU_SECTIONS,
@@ -15,6 +16,7 @@ import {
 import { isSpecialAvailable, specialLabel } from "@/lib/specials";
 import { business } from "@/lib/business";
 import { useCart } from "./cart/CartContext";
+import { announceAdded } from "./cart/AddedToast";
 import CateringForm from "./CateringForm";
 
 // Branded-menu section labels (mirrors the printed menu).
@@ -36,12 +38,13 @@ const SECTION_NOTE: Partial<Record<MenuSection, string>> = {
   "Whole Cuts": "Order ahead — call 386-507-4309. Full rack needs 24 hours, whole brisket 3 days.",
 };
 
-// One Square modifier list ("Pick your meats", "Pick your side", ...). Rules come
-// from Square: a single pick swaps on tap; when doubles are allowed, tapping adds
-// another and "−" takes one away.
-function ChoiceGroup({
-  choice, counts, onAdd, onRemove,
+// One Square modifier list as a numbered step ("Pick your meats", "Pick your
+// side", "Extra sauce"). Rules come from Square: a single pick swaps on tap;
+// when doubles are allowed, tapping adds another and "−" takes one away.
+function ChoiceStep({
+  step, choice, counts, onAdd, onRemove,
 }: {
+  step: number;
   choice: Choice;
   counts: Record<string, number>;
   onAdd: (id: string) => void;
@@ -51,21 +54,27 @@ function ChoiceGroup({
   const left = Math.max(choice.min - total, 0);
   const full = choice.max > 0 && total >= choice.max;
   const single = choice.max === 1;
+  const done = choice.min > 0 && left === 0;
   const rule =
     choice.min > 0 && choice.min === choice.max
-      ? `pick ${choice.min}`
+      ? `Pick ${choice.min}`
       : choice.min > 0
-        ? `pick at least ${choice.min}`
+        ? `Pick at least ${choice.min}`
         : choice.max > 0
-          ? `optional, up to ${choice.max}`
-          : "optional";
+          ? `Optional · up to ${choice.max}`
+          : "Optional";
   return (
-    <div className="mt-2">
-      <p className="text-xs text-white/60 mb-1.5">
-        {choice.name}: {rule}
-        {choice.repeats && !single ? " (doubles OK)" : ""}
-        {left > 0 ? ` · ${left} to go` : ""}
-      </p>
+    <section className="py-4 border-b border-white/10">
+      <div className="flex items-baseline justify-between gap-3 mb-3">
+        <h4 className="font-semibold text-white">
+          <span className="text-brand-primary mr-1.5">{step}.</span>
+          {choice.name}
+        </h4>
+        <span className={`text-xs whitespace-nowrap ${done ? "text-green-400" : left > 0 ? "text-brand-primary" : "text-white/50"}`}>
+          {done ? "✓ Done" : left > 0 ? `${rule} · ${left} to go` : rule}
+          {choice.repeats && !single && !done ? " · doubles OK" : ""}
+        </span>
+      </div>
       <div className="flex flex-wrap gap-2">
         {choice.options.map((o) => {
           const n = counts[o.id] ?? 0;
@@ -76,7 +85,7 @@ function ChoiceGroup({
             <span
               key={o.id}
               className={`inline-flex items-stretch rounded-full border text-sm transition-colors ${
-                on ? "bg-brand-primary border-brand-primary text-white" : "border-white/25 text-white/80 hover:border-brand-primary"
+                on ? "bg-brand-primary border-brand-primary text-white" : "border-white/25 text-white/85 hover:border-brand-primary"
               }`}
             >
               <button
@@ -84,18 +93,18 @@ function ChoiceGroup({
                 onClick={tap}
                 disabled={disabled}
                 aria-pressed={on}
-                className="px-3 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
+                className={`px-4 py-2 disabled:cursor-not-allowed ${on ? "" : "disabled:opacity-40"}`}
               >
                 {o.name}
                 {n > 1 ? ` ×${n}` : ""}
-                {o.price > 0 ? ` +$${o.price.toFixed(2)}` : ""}
+                {o.price > 0 ? <span className="opacity-80"> +${o.price.toFixed(2)}</span> : null}
               </button>
               {on && choice.repeats && !single && (
                 <button
                   type="button"
                   onClick={() => onRemove(o.id)}
                   aria-label={`Remove one ${o.name}`}
-                  className="pl-2 pr-3 py-1.5 border-l border-white/30"
+                  className="pl-2 pr-4 py-2 border-l border-white/30"
                 >
                   −
                 </button>
@@ -104,14 +113,186 @@ function ChoiceGroup({
           );
         })}
       </div>
-    </div>
+    </section>
+  );
+}
+
+// The "build your plate" panel: a bottom sheet on phones, a dialog on desktop.
+// Steps follow Square's order (meats, then side, then sauce), then a special
+// request, quantity, and one Add button with the running total.
+function ItemSheet({ item, onClose, onAdded }: { item: MenuItem; onClose: () => void; onAdded: (msg: string) => void }) {
+  const { add } = useCart();
+  const choices = item.choices ?? [];
+  const [counts, setCounts] = useState<Record<string, number>>({});
+  const [note, setNote] = useState("");
+  const [qty, setQty] = useState(1);
+  const stepRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const extrasRef = useRef<HTMLDivElement | null>(null);
+
+  // Lock the page behind the sheet; Escape closes it.
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [onClose]);
+
+  const totalIn = (c: Choice, cs: Record<string, number>) => c.options.reduce((s, o) => s + (cs[o.id] ?? 0), 0);
+  const firstOpen = (cs: Record<string, number>) => {
+    const i = choices.findIndex((c) => totalIn(c, cs) < c.min);
+    return i < 0 ? choices.length : i;
+  };
+
+  // When a required step is finished, bring the next one into view.
+  const advance = (before: Record<string, number>, after: Record<string, number>) => {
+    const a = firstOpen(before);
+    const b = firstOpen(after);
+    if (b > a) {
+      const el = b < choices.length ? stepRefs.current[b] : extrasRef.current;
+      setTimeout(() => el?.scrollIntoView({ behavior: "smooth", block: "nearest" }), 120);
+    }
+  };
+  const addOption = (choice: Choice, id: string) =>
+    setCounts((prev) => {
+      let next = prev;
+      const total = totalIn(choice, prev);
+      if (choice.max === 1) {
+        next = { ...prev };
+        for (const o of choice.options) delete next[o.id];
+        next[id] = 1;
+      } else if (!(choice.max > 0 && total >= choice.max) && !(!choice.repeats && prev[id])) {
+        next = { ...prev, [id]: (prev[id] ?? 0) + 1 };
+      }
+      advance(prev, next);
+      return next;
+    });
+  const removeOption = (id: string) =>
+    setCounts((prev) => {
+      const next = { ...prev };
+      if ((next[id] ?? 0) > 1) next[id] -= 1;
+      else delete next[id];
+      return next;
+    });
+
+  const picks: ChoicePick[] = Object.entries(counts)
+    .filter(([, n]) => n > 0)
+    .map(([id, n]) => ({ id, qty: n }));
+  const checked = checkPicks(item, picks);
+  const unitPrice = item.price + picksPrice(choices, checked.ok ? checked.picks : picks);
+  const missing = choices
+    .map((c) => {
+      const left = c.min - totalIn(c, counts);
+      return left > 0 ? `${left} more ${c.label.toLowerCase()}` : "";
+    })
+    .filter(Boolean);
+  const lb = item.unit === "lb";
+
+  const onAdd = () => {
+    if (!checked.ok) return;
+    const cleanNote = note.replace(/\s+/g, " ").trim().slice(0, 140);
+    add({
+      id: item.id,
+      title: item.title,
+      price: unitPrice,
+      qty,
+      ...(checked.picks.length ? { picks: checked.picks, detail: describePicks(choices, checked.picks) } : {}),
+      ...(cleanNote ? { note: cleanNote } : {}),
+      ...(item.leadDays ? { leadDays: item.leadDays } : {}),
+      ...(item.unit ? { unit: item.unit } : {}),
+    });
+    onAdded(`Added ${qty > 1 ? `${qty}${lb ? " lb" : "×"} ` : ""}${item.title}`);
+    onClose();
+  };
+
+  return createPortal(
+    <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center" role="dialog" aria-modal="true" aria-labelledby={`sheet-${item.id}`}>
+      <button type="button" aria-hidden="true" tabIndex={-1} onClick={onClose} className="absolute inset-0 bg-black/75 cursor-default" />
+      <div className="relative w-full sm:max-w-lg max-h-[92vh] flex flex-col bg-[#141414] border border-white/10 rounded-t-2xl sm:rounded-2xl shadow-2xl">
+        <div className="flex items-start justify-between gap-4 px-5 pt-5 pb-3 border-b border-white/10">
+          <div className="min-w-0">
+            <h3 id={`sheet-${item.id}`} className="font-display text-2xl tracking-wide text-white uppercase leading-tight">
+              {item.title}
+            </h3>
+            <p className="text-brand-primary font-bold mt-1">
+              ${item.price.toFixed(2)}
+              {lb ? " / lb" : ""}
+            </p>
+            {item.description && <p className="text-sm text-white/55 mt-1">{item.description}</p>}
+            {item.notice && (
+              <p className="mt-1 text-xs font-semibold uppercase tracking-wider text-brand-primary/90">{item.notice}</p>
+            )}
+          </div>
+          <button type="button" onClick={onClose} aria-label="Close" className="text-white/60 hover:text-white text-2xl leading-none px-1">
+            ×
+          </button>
+        </div>
+
+        <div className="overflow-y-auto px-5">
+          {choices.map((c, i) => (
+            <div key={c.id} ref={(el) => { stepRefs.current[i] = el; }}>
+              <ChoiceStep
+                step={i + 1}
+                choice={c}
+                counts={counts}
+                onAdd={(id) => addOption(c, id)}
+                onRemove={removeOption}
+              />
+            </div>
+          ))}
+          <div ref={extrasRef} className="py-4">
+            <label htmlFor={`note-${item.id}`} className="block font-semibold text-white mb-2">
+              {choices.length ? <span className="text-brand-primary mr-1.5">{choices.length + 1}.</span> : null}
+              Special request <span className="text-white/45 font-normal text-sm">(optional)</span>
+            </label>
+            <textarea
+              id={`note-${item.id}`}
+              value={note}
+              onChange={(e) => setNote(e.target.value.slice(0, 140))}
+              rows={2}
+              placeholder="Anything for this item? e.g. extra crispy, cut in half"
+              className="w-full p-3 rounded bg-black/40 border border-white/20 text-white text-sm focus:outline-none focus:border-brand-primary"
+            />
+            <div className="flex items-center justify-between mt-4">
+              <span className="font-semibold text-white">{lb ? "Pounds" : "Quantity"}</span>
+              <div className="flex items-center gap-2">
+                <button type="button" onClick={() => setQty((q) => Math.max(1, q - 1))} aria-label="Fewer" className="w-10 h-10 rounded-full border border-white/25 hover:border-brand-primary text-lg">
+                  −
+                </button>
+                <span className="w-12 text-center font-semibold">
+                  {qty}
+                  {lb ? " lb" : ""}
+                </span>
+                <button type="button" onClick={() => setQty((q) => Math.min(20, q + 1))} aria-label="More" className="w-10 h-10 rounded-full border border-white/25 hover:border-brand-primary text-lg">
+                  +
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="px-5 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] border-t border-white/10">
+          {missing.length > 0 && <p className="text-center text-sm text-white/60 mb-2">Pick {missing.join(" and ")}</p>}
+          <button
+            type="button"
+            onClick={onAdd}
+            disabled={!checked.ok}
+            className="w-full py-3.5 rounded-full bg-brand-primary text-white font-bold text-lg hover:opacity-90 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            Add to order · ${(unitPrice * qty).toFixed(2)}
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
   );
 }
 
 export function ItemRow({ item }: { item: MenuItem }) {
-  const { add } = useCart();
-  // Chosen options (Square modifier id -> count) for this item's choices.
-  const [counts, setCounts] = useState<Record<string, number>>({});
+  const [open, setOpen] = useState(false);
   // Smoke Schedule items are only orderable on their day (shop time). Computed on
   // the client so the page can stay cached and the day can roll over.
   const [available, setAvailable] = useState(true);
@@ -123,50 +304,12 @@ export function ItemRow({ item }: { item: MenuItem }) {
     return () => clearInterval(id);
   }, [item.special]);
 
-  const choices = item.choices ?? [];
-  const picks: ChoicePick[] = Object.entries(counts)
-    .filter(([, n]) => n > 0)
-    .map(([id, qty]) => ({ id, qty }));
-  const checked = checkPicks(item, picks);
   const orderable = available && !item.soldOut;
-  const ready = orderable && checked.ok;
-
-  const addOption = (choice: Choice, id: string) =>
-    setCounts((prev) => {
-      const total = choice.options.reduce((s, o) => s + (prev[o.id] ?? 0), 0);
-      if (choice.max === 1) {
-        const next = { ...prev };
-        for (const o of choice.options) delete next[o.id];
-        return { ...next, [id]: 1 };
-      }
-      if (choice.max > 0 && total >= choice.max) return prev;
-      if (!choice.repeats && prev[id]) return prev;
-      return { ...prev, [id]: (prev[id] ?? 0) + 1 };
-    });
-  const removeOption = (id: string) =>
-    setCounts((prev) => {
-      const next = { ...prev };
-      if ((next[id] ?? 0) > 1) next[id] -= 1;
-      else delete next[id];
-      return next;
-    });
-
-  const onAdd = () => {
-    if (!checked.ok) return;
-    add({
-      id: item.id,
-      title: item.title,
-      price: item.price + picksPrice(choices, checked.picks),
-      ...(checked.picks.length ? { picks: checked.picks, detail: describePicks(choices, checked.picks) } : {}),
-    });
-    setCounts({});
-  };
-  const missing = choices
-    .map((c) => {
-      const total = c.options.reduce((s, o) => s + (counts[o.id] ?? 0), 0);
-      return total < c.min ? `${c.min - total} ${c.label.toLowerCase()}` : "";
-    })
-    .filter(Boolean);
+  // "Pick 2 meats · 1 side" — what the panel will ask for, at a glance.
+  const asks = (item.choices ?? [])
+    .filter((c) => c.min > 0)
+    .map((c) => `${c.min} ${c.label.toLowerCase()}`)
+    .join(" · ");
 
   return (
     <div className={`py-3 border-b border-white/10 ${orderable ? "" : "opacity-60"}`}>
@@ -187,7 +330,10 @@ export function ItemRow({ item }: { item: MenuItem }) {
           <span className="hidden sm:block flex-1 border-b border-dotted border-white/25 translate-y-[-4px]" />
         </div>
         <div className="shrink-0 flex items-center gap-3">
-          <span className="font-bold text-lg text-brand-primary">${item.price.toFixed(2)}</span>
+          <span className="font-bold text-lg text-brand-primary">
+            ${item.price.toFixed(2)}
+            {item.unit === "lb" ? <span className="text-sm font-semibold"> /lb</span> : null}
+          </span>
           {item.callToOrder ? (
             <a
               href={business.phoneHref}
@@ -198,19 +344,10 @@ export function ItemRow({ item }: { item: MenuItem }) {
             </a>
           ) : (
             <button
-              onClick={onAdd}
-              disabled={!ready}
+              onClick={() => setOpen(true)}
+              disabled={!orderable}
               className="px-4 py-1.5 rounded-full bg-brand-primary text-white text-sm font-semibold hover:opacity-80 transition-all disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
               aria-label={`Add ${item.title} to order`}
-              title={
-                item.soldOut
-                  ? "Sold out right now"
-                  : !available && item.special
-                    ? specialLabel(item.special)
-                    : missing.length
-                      ? `Pick ${missing.join(" and ")}`
-                      : undefined
-              }
             >
               Add +
             </button>
@@ -218,6 +355,7 @@ export function ItemRow({ item }: { item: MenuItem }) {
         </div>
       </div>
       {item.description && <p className="mt-1 text-sm text-white/50">{item.description}</p>}
+      {orderable && asks && <p className="mt-1 text-xs text-white/40">Pick {asks}</p>}
       {item.notice && (
         <p className="mt-1 text-xs font-semibold uppercase tracking-wider text-brand-primary/90">{item.notice}</p>
       )}
@@ -226,17 +364,7 @@ export function ItemRow({ item }: { item: MenuItem }) {
           {available ? `On today — ${specialLabel(item.special)}` : `Not today — ${specialLabel(item.special)}`}
         </p>
       )}
-      {orderable &&
-        !item.callToOrder &&
-        choices.map((c) => (
-          <ChoiceGroup
-            key={c.id}
-            choice={c}
-            counts={counts}
-            onAdd={(id) => addOption(c, id)}
-            onRemove={removeOption}
-          />
-        ))}
+      {open && <ItemSheet item={item} onClose={() => setOpen(false)} onAdded={announceAdded} />}
     </div>
   );
 }

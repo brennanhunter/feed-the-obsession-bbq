@@ -9,14 +9,18 @@ export type CartItem = {
   title: string;
   price: number; // dollars, including any paid options
   qty: number;
-  picks?: ChoicePick[]; // Square modifier ids + counts (meats, side, ...)
+  picks?: ChoicePick[]; // Square modifier ids + counts (meats, side, sauce, ...)
   detail?: string; // "Meats: Brisket ×2 + Ribs · Side: Beans", for display
+  note?: string; // the customer's special request for this item
+  leadDays?: number; // whole cuts: pickup must be this many days out
+  unit?: "lb"; // sold by the pound
 };
 
-type AddInput = { id: string; title: string; price: number; picks?: ChoicePick[]; detail?: string };
+type AddInput = Omit<CartItem, "key" | "qty"> & { qty?: number };
 
-const keyOf = (i: { id: string; picks?: ChoicePick[] }) =>
-  [i.id, ...(i.picks ?? []).map((p) => `${p.id}:${p.qty}`)].join("|");
+// Same item with different picks or a different request is its own line.
+const keyOf = (i: { id: string; picks?: ChoicePick[]; note?: string }) =>
+  [i.id, ...(i.picks ?? []).map((p) => `${p.id}:${p.qty}`), i.note ? `note:${i.note}` : ""].filter(Boolean).join("|");
 
 type Ctx = {
   items: CartItem[];
@@ -60,12 +64,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   }, [items]);
 
-  const add: Ctx["add"] = (i) =>
+  const add: Ctx["add"] = ({ qty = 1, ...i }) =>
     setItems((prev) => {
       const key = keyOf(i);
+      const n = Math.max(1, Math.floor(qty));
       const found = prev.find((p) => p.key === key);
       return found
-        ? prev.map((p) => (p.key === key ? { ...p, qty: p.qty + 1 } : p))
+        ? prev.map((p) => (p.key === key ? { ...p, qty: p.qty + n } : p))
         : [
             ...prev,
             {
@@ -73,9 +78,12 @@ export function CartProvider({ children }: { children: ReactNode }) {
               id: i.id,
               title: i.title,
               price: i.price,
-              qty: 1,
+              qty: n,
               ...(i.picks?.length ? { picks: i.picks } : {}),
               ...(i.detail ? { detail: i.detail } : {}),
+              ...(i.note ? { note: i.note } : {}),
+              ...(i.leadDays ? { leadDays: i.leadDays } : {}),
+              ...(i.unit ? { unit: i.unit } : {}),
             },
           ];
     });

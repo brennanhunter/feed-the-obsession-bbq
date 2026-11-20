@@ -79,16 +79,28 @@ export function getOpenStatus(): { open: boolean; label: string } {
 
 export type PickupOption = { iso: string; label: string };
 
-/** ASAP availability + upcoming scheduled pickup slots (in the shop's tz). */
-export function getPickupOptions(): { asap: boolean; slots: PickupOption[] } {
+/** Whole calendar days (shop's tz) from today to the given moment: 0 = today. */
+export function etDaysAhead(date: Date): number {
+  const a = getETDateParts(new Date());
+  const b = getETDateParts(date);
+  return Math.round((Date.UTC(b.year, b.month - 1, b.day) - Date.UTC(a.year, a.month - 1, a.day)) / 86400000);
+}
+
+/**
+ * ASAP availability + upcoming scheduled pickup slots (in the shop's tz).
+ * `leadDays` > 0 (whole cuts in the cart) drops ASAP and starts the slots that
+ * many calendar days out, so a 2-day item can't be picked up sooner.
+ */
+export function getPickupOptions(leadDays = 0): { asap: boolean; slots: PickupOption[] } {
   const now = nowET();
   const today = business.hours.find((h) => h.days.includes(now.weekday));
-  const asap = today ? now.mins >= toMins(today.opens) && now.mins < toMins(today.closes) : false;
+  const asap = leadDays > 0 ? false : today ? now.mins >= toMins(today.opens) && now.mins < toMins(today.closes) : false;
+  const maxSlots = leadDays > 0 ? 64 : 24; // a few full days to choose from for orders ahead
 
   const slots: PickupOption[] = [];
   const noonToday = etToDate(now.year, now.month, now.day, 12, 0);
 
-  for (let offset = 0; offset < 4 && slots.length < 24; offset++) {
+  for (let offset = leadDays; offset < leadDays + 4 && slots.length < maxSlots; offset++) {
     const dayDate = new Date(noonToday.getTime() + offset * 86400000);
     const p = partsInTZ(dayDate, { weekday: "long", year: "numeric", month: "2-digit", day: "2-digit" });
     const hrs = business.hours.find((h) => h.days.includes(p.weekday));
@@ -99,11 +111,16 @@ export function getPickupOptions(): { asap: boolean; slots: PickupOption[] } {
     let startM = offset === 0 ? Math.max(openM, now.mins + PREP_MIN) : openM;
     startM = Math.ceil(startM / SLOT_MIN) * SLOT_MIN;
 
-    for (let m = startM; m < closeM && slots.length < 24; m += SLOT_MIN) {
+    for (let m = startM; m < closeM && slots.length < maxSlots; m += SLOT_MIN) {
       const h = Math.floor(m / 60);
       const mi = m % 60;
       const iso = etToDate(+p.year, +p.month, +p.day, h, mi).toISOString();
-      const dayLabel = offset === 0 ? "Today" : offset === 1 ? "Tomorrow" : p.weekday;
+      const dayLabel =
+        offset === 0
+          ? "Today"
+          : offset === 1
+            ? "Tomorrow"
+            : `${p.weekday.slice(0, 3)} ${+p.month}/${+p.day}`;
       slots.push({ iso, label: `${dayLabel} ${fmt12(h, mi)}` });
     }
   }

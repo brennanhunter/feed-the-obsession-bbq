@@ -5,14 +5,14 @@ import { isSpecialAvailable, specialLabel } from "@/lib/specials";
 import { sendEmail } from "@/lib/mailer";
 import { orderConfirmationEmail, type OrderEmailLine } from "@/lib/order-email";
 import { orderNotifyEmail } from "@/lib/order-notify";
-import { formatPickupLabel } from "@/lib/hours";
+import { etDaysAhead, formatPickupLabel } from "@/lib/hours";
 import { business } from "@/lib/business";
 import { MAX_TIP_CENTS } from "@/lib/tips";
 
 // Browser sends only Square catalog ids + quantities. The server validates each
 // id against the live McSorleys menu and lets Square price the order from the
 // catalog — so a tampered request can never change what gets charged.
-type CartLine = { id: string; quantity: number; picks?: ChoicePick[] };
+type CartLine = { id: string; quantity: number; picks?: ChoicePick[]; note?: string };
 type Body = {
   sourceId: string;
   items: CartLine[];
@@ -102,11 +102,24 @@ export async function POST(req: Request) {
       if (!checked.ok) return new Response(checked.error, { status: 400 });
       picks = checked.picks;
     }
-    const detail = describePicks(item.choices, picks) || undefined;
+    // Whole cuts are smoked to order: pickup at least N days out (shop's calendar).
+    if (item.leadDays) {
+      if (!pickupAt || etDaysAhead(new Date(pickupAt)) < item.leadDays) {
+        return new Response(
+          `The ${item.title} needs ${item.leadDays} days' notice — please choose a pickup time ${item.leadDays} or more days out`,
+          { status: 400 }
+        );
+      }
+    }
+    // A special request for this item ("extra crispy", "cut in half") rides on
+    // the Square line item as its note, so it prints with that item.
+    const itemNote = String(line.note ?? "").replace(/\s+/g, " ").trim().slice(0, 140);
+    const detail = [describePicks(item.choices, picks), itemNote ? `Request: ${itemNote}` : ""].filter(Boolean).join(" · ") || undefined;
     lineItems.push({
       catalogObjectId: item.id,
       quantity: String(qty),
       ...(picks.length ? { modifiers: picks.map((p) => ({ catalogObjectId: p.id, quantity: String(p.qty) })) } : {}),
+      ...(itemNote ? { note: itemNote } : {}),
     });
     emailLines.push({
       title: item.title,
