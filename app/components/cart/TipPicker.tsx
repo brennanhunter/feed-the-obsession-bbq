@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { MAX_TIP_CENTS, NO_TIP, TIP_PCTS, type TipChoice } from "@/lib/tips";
+import { FLAT_TIPS_UNDER_CENTS, MAX_TIP_CENTS, NO_TIP, TIP_FLATS_CENTS, TIP_PCTS, type TipChoice } from "@/lib/tips";
 
 const money = (cents: number) => `$${(cents / 100).toFixed(2)}`;
 
-// "No tip / 10% / 15% / 20% / Other" pills. Percentages are on the food total.
+// "No tip / 10% / 15% / 20% / Other" pills (percentages of the food total), or
+// "No tip / $1 / $2 / $3 / Other" on small orders.
 export default function TipPicker({
   subtotalCents,
   value,
@@ -47,22 +48,36 @@ export default function TipPicker({
         >
           No tip
         </button>
-        {TIP_PCTS.map((pct) => (
-          <button
-            key={pct}
-            type="button"
-            onClick={() => {
-              setCustomOpen(false);
-              onChange({ kind: "pct", pct });
-            }}
-            className={pill(value.kind === "pct" && value.pct === pct)}
-          >
-            {pct}%
-            <span className="block text-xs font-normal text-white/60">
-              {money(Math.round((subtotalCents * pct) / 100))}
-            </span>
-          </button>
-        ))}
+        {subtotalCents < FLAT_TIPS_UNDER_CENTS
+          ? TIP_FLATS_CENTS.map((cents) => (
+              <button
+                key={cents}
+                type="button"
+                onClick={() => {
+                  setCustomOpen(false);
+                  onChange({ kind: "flat", cents });
+                }}
+                className={pill(value.kind === "flat" && value.cents === cents)}
+              >
+                {money(cents).replace(".00", "")}
+              </button>
+            ))
+          : TIP_PCTS.map((pct) => (
+              <button
+                key={pct}
+                type="button"
+                onClick={() => {
+                  setCustomOpen(false);
+                  onChange({ kind: "pct", pct });
+                }}
+                className={pill(value.kind === "pct" && value.pct === pct)}
+              >
+                {pct}%
+                <span className="block text-xs font-normal text-white/60">
+                  {money(Math.round((subtotalCents * pct) / 100))}
+                </span>
+              </button>
+            ))}
         <button
           type="button"
           onClick={() => {

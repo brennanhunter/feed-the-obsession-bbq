@@ -15,7 +15,7 @@ import {
 } from "@/lib/catalog";
 import { isSpecialAvailable, specialLabel } from "@/lib/specials";
 import { business } from "@/lib/business";
-import { useCart } from "./cart/CartContext";
+import { useCart, type CartInput } from "./cart/CartContext";
 import { announceAdded } from "./cart/AddedToast";
 import CateringForm from "./CateringForm";
 
@@ -32,10 +32,11 @@ const SECTION_LABEL: Record<MenuSection, string> = {
 
 const SECTION_NOTE: Partial<Record<MenuSection, string>> = {
   Plates: "Every plate comes with one side — pick it when you add the plate.",
+  Combos: "Bring an appetite or bring a friend.",
   "Daily Specials":
     "One every weekday — $9.99, orderable on its day. Plus 50¢ wings the first Friday of the month and a full rack for $19.99 every other Thursday.",
-  "By the Pound": "Smoked meat by the weight, sliced to order while it lasts.",
-  "Whole Cuts": "Order ahead — call 386-507-4309. Full rack needs 24 hours, whole brisket 3 days.",
+  "By the Pound": "Smoked meat by the weight, sliced to order while it lasts. Plan on about ⅓–½ lb per person.",
+  "Whole Cuts": `Smoked to order — order online at least 2 days ahead. Big order or need it sooner? Call ${business.phone}.`,
 };
 
 // One Square modifier list as a numbered step ("Pick your meats", "Pick your
@@ -120,12 +121,28 @@ function ChoiceStep({
 // The "build your plate" panel: a bottom sheet on phones, a dialog on desktop.
 // Steps follow Square's order (meats, then side, then sauce), then a special
 // request, quantity, and one Add button with the running total.
-function ItemSheet({ item, onClose, onAdded }: { item: MenuItem; onClose: () => void; onAdded: (msg: string) => void }) {
+// Also used by the cart's "Edit" (initial = the line's picks/request/qty, and
+// onSave replaces that line instead of adding a new one).
+export function ItemSheet({
+  item,
+  onClose,
+  onAdded,
+  initial,
+  onSave,
+}: {
+  item: MenuItem;
+  onClose: () => void;
+  onAdded?: (msg: string) => void;
+  initial?: { picks?: ChoicePick[]; note?: string; qty?: number };
+  onSave?: (input: CartInput) => void;
+}) {
   const { add } = useCart();
   const choices = item.choices ?? [];
-  const [counts, setCounts] = useState<Record<string, number>>({});
-  const [note, setNote] = useState("");
-  const [qty, setQty] = useState(1);
+  const [counts, setCounts] = useState<Record<string, number>>(() =>
+    Object.fromEntries((initial?.picks ?? []).map((p) => [p.id, p.qty]))
+  );
+  const [note, setNote] = useState(initial?.note ?? "");
+  const [qty, setQty] = useState(initial?.qty ?? 1);
   const stepRefs = useRef<(HTMLDivElement | null)[]>([]);
   const extrasRef = useRef<HTMLDivElement | null>(null);
 
@@ -194,7 +211,7 @@ function ItemSheet({ item, onClose, onAdded }: { item: MenuItem; onClose: () => 
   const onAdd = () => {
     if (!checked.ok) return;
     const cleanNote = note.replace(/\s+/g, " ").trim().slice(0, 140);
-    add({
+    const input: CartInput = {
       id: item.id,
       title: item.title,
       price: unitPrice,
@@ -203,8 +220,12 @@ function ItemSheet({ item, onClose, onAdded }: { item: MenuItem; onClose: () => 
       ...(cleanNote ? { note: cleanNote } : {}),
       ...(item.leadDays ? { leadDays: item.leadDays } : {}),
       ...(item.unit ? { unit: item.unit } : {}),
-    });
-    onAdded(`Added ${qty > 1 ? `${qty}${lb ? " lb" : "×"} ` : ""}${item.title}`);
+    };
+    if (onSave) onSave(input);
+    else {
+      add(input);
+      onAdded?.(`Added ${qty > 1 ? `${qty}${lb ? " lb" : "×"} ` : ""}${item.title}`);
+    }
     onClose();
   };
 
@@ -282,7 +303,7 @@ function ItemSheet({ item, onClose, onAdded }: { item: MenuItem; onClose: () => 
             disabled={!checked.ok}
             className="w-full py-3.5 rounded-full bg-brand-primary text-white font-bold text-lg hover:opacity-90 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            Add to order · ${(unitPrice * qty).toFixed(2)}
+            {onSave ? "Save changes" : "Add to order"} · ${(unitPrice * qty).toFixed(2)}
           </button>
         </div>
       </div>

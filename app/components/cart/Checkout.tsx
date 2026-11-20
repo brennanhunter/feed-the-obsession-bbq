@@ -32,10 +32,12 @@ export default function Checkout({
   onDone,
   instructions,
   tipCents = 0,
+  taxCents = 0,
 }: {
   onDone?: () => void;
   instructions?: string;
   tipCents?: number; // optional tip picked on the order page, charged on top of the food
+  taxCents?: number; // Florida sales tax from Square's quote (Square applies it at checkout)
 }) {
   const { items, totalCents, clear } = useCart();
   const [tipped, setTipped] = useState(false); // remembered past clear() for the thank-you
@@ -50,6 +52,23 @@ export default function Checkout({
   const [openStatus, setOpenStatus] = useState<{ open: boolean; label: string } | null>(null);
   const [pickupOpts, setPickupOpts] = useState<{ asap: boolean; slots: PickupOption[] } | null>(null);
   const [pickup, setPickup] = useState<string>("asap"); // "asap" or a slot ISO
+  // Repeat customers: name, phone and email are remembered on this device (only
+  // here, in the browser) after a successful order, and filled in next time.
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem("fto-customer") || "null") as
+        | { name?: string; phone?: string; email?: string }
+        | null;
+      if (saved) {
+        if (saved.name) setName(saved.name);
+        if (saved.phone) setPhone(saved.phone);
+        if (saved.email) setEmail(saved.email);
+      }
+    } catch {
+      /* storage blocked or bad data: start blank */
+    }
+  }, []);
+
   // Whole cuts in the cart push the earliest pickup out by their notice period.
   const leadDays = items.reduce((m, i) => Math.max(m, i.leadDays ?? 0), 0);
   useEffect(() => {
@@ -60,6 +79,11 @@ export default function Checkout({
       prev !== "asap" && opts.slots.some((s) => s.iso === prev) ? prev : opts.asap ? "asap" : opts.slots[0]?.iso ?? ""
     );
   }, [leadDays]);
+  const pickupDays: string[] = [];
+  if (pickupOpts?.asap) pickupDays.push("Today");
+  for (const sl of pickupOpts?.slots ?? []) if (!pickupDays.includes(sl.day)) pickupDays.push(sl.day);
+  const pickupDay =
+    pickup === "asap" ? "Today" : pickupOpts?.slots.find((sl) => sl.iso === pickup)?.day ?? pickupDays[0] ?? "";
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const cardRef = useRef<any>(null);
   const initStarted = useRef(false); // reserve synchronously so the form attaches once
@@ -123,6 +147,11 @@ export default function Checkout({
       });
       if (!res.ok) throw new Error((await res.text()) || "Payment failed.");
       setTipped(tipCents > 0);
+      try {
+        localStorage.setItem("fto-customer", JSON.stringify({ name: name.trim(), phone: phone.trim(), email: email.trim() }));
+      } catch {
+        /* ignore */
+      }
       clear();
       setStatus("done");
     } catch (e) {
@@ -213,18 +242,39 @@ export default function Checkout({
               </span>
             )}
           </label>
-          <select
-            value={pickup}
-            onChange={(e) => setPickup(e.target.value)}
-            className="w-full p-3 rounded bg-black/40 border border-white/20 text-white focus:outline-none focus:border-brand-primary"
-          >
-            {pickupOpts.asap && <option value="asap">ASAP — ready in ~20 min</option>}
-            {pickupOpts.slots.map((s) => (
-              <option key={s.iso} value={s.iso}>
-                {s.label}
-              </option>
-            ))}
-          </select>
+          {/* Day, then time (like Jersey Mike's): shorter lists, and orders days ahead read clearly. */}
+          <div className="grid grid-cols-2 gap-2">
+            <select
+              aria-label="Pickup day"
+              value={pickupDay}
+              onChange={(e) => {
+                const day = e.target.value;
+                setPickup(day === "Today" && pickupOpts.asap ? "asap" : pickupOpts.slots.find((s) => s.day === day)?.iso ?? "");
+              }}
+              className="w-full p-3 rounded bg-black/40 border border-white/20 text-white focus:outline-none focus:border-brand-primary"
+            >
+              {pickupDays.map((d) => (
+                <option key={d} value={d}>
+                  {d}
+                </option>
+              ))}
+            </select>
+            <select
+              aria-label="Pickup time"
+              value={pickup}
+              onChange={(e) => setPickup(e.target.value)}
+              className="w-full p-3 rounded bg-black/40 border border-white/20 text-white focus:outline-none focus:border-brand-primary"
+            >
+              {pickupDay === "Today" && pickupOpts.asap && <option value="asap">ASAP (~20 min)</option>}
+              {pickupOpts.slots
+                .filter((s) => s.day === pickupDay)
+                .map((s) => (
+                  <option key={s.iso} value={s.iso}>
+                    {s.time}
+                  </option>
+                ))}
+            </select>
+          </div>
         </div>
       )}
 
@@ -284,7 +334,7 @@ export default function Checkout({
         disabled={status === "paying" || items.length === 0}
         className="w-full py-3 rounded-full bg-brand-primary font-bold disabled:opacity-50"
       >
-        {status === "paying" ? "Processing…" : `Pay $${((totalCents + tipCents) / 100).toFixed(2)}`}
+        {status === "paying" ? "Processing…" : `Pay $${((totalCents + taxCents + tipCents) / 100).toFixed(2)}`}
       </button>
       <p className="mt-3 text-xs text-white/50 text-center leading-relaxed">
         🔒 Secure checkout by Square. Your card details go straight to Square and never touch our servers.

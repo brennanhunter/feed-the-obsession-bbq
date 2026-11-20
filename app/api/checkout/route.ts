@@ -158,6 +158,9 @@ export async function POST(req: Request) {
             },
           },
         ],
+        // Apply the catalog's sales tax (Florida 6%, set on every menu item in
+        // Square) the same way the POS does; the API skips it unless asked.
+        pricingOptions: { autoApplyTaxes: true },
         metadata: {
           channel: body.channel,
           ...(body.table?.trim() ? { table: body.table.trim() } : {}),
@@ -172,7 +175,7 @@ export async function POST(req: Request) {
       return new Response("Could not create the order", { status: 502 });
     }
     const foodCents = Number(amount);
-    const taxCents = Number(order?.totalTaxMoney?.amount ?? 0); // 0 today; shown if ever enabled
+    const taxCents = Number(order?.totalTaxMoney?.amount ?? 0); // Florida sales tax, applied by Square
     const chargedCents = foodCents + tipCents;
 
     // 2) Charge the card for Square's computed total (plus any tip) and apply it to the order.

@@ -77,7 +77,7 @@ export function getOpenStatus(): { open: boolean; label: string } {
   return { open: false, label: `Closed · opens ${fmt12(oh, om)}` };
 }
 
-export type PickupOption = { iso: string; label: string };
+export type PickupOption = { iso: string; label: string; day: string; time: string }; // day: "Today" / "Tomorrow" / "Sun 11/22"
 
 /** Whole calendar days (shop's tz) from today to the given moment: 0 = today. */
 export function etDaysAhead(date: Date): number {
@@ -95,7 +95,7 @@ export function getPickupOptions(leadDays = 0): { asap: boolean; slots: PickupOp
   const now = nowET();
   const today = business.hours.find((h) => h.days.includes(now.weekday));
   const asap = leadDays > 0 ? false : today ? now.mins >= toMins(today.opens) && now.mins < toMins(today.closes) : false;
-  const maxSlots = leadDays > 0 ? 64 : 24; // a few full days to choose from for orders ahead
+  const maxSlots = 64; // up to four days to choose from
 
   const slots: PickupOption[] = [];
   const noonToday = etToDate(now.year, now.month, now.day, 12, 0);
@@ -121,7 +121,7 @@ export function getPickupOptions(leadDays = 0): { asap: boolean; slots: PickupOp
           : offset === 1
             ? "Tomorrow"
             : `${p.weekday.slice(0, 3)} ${+p.month}/${+p.day}`;
-      slots.push({ iso, label: `${dayLabel} ${fmt12(h, mi)}` });
+      slots.push({ iso, label: `${dayLabel} ${fmt12(h, mi)}`, day: dayLabel, time: fmt12(h, mi) });
     }
   }
   return { asap, slots };

@@ -22,7 +22,7 @@ export default async function Page() {
     <div className="min-h-screen bg-black text-white">
       <Header />
       <main>
-        <OrderPage extras={extras} />
+        <OrderPage extras={extras} menu={items} />
       </main>
       <Footer />
     </div>

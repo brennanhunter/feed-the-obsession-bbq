@@ -6,7 +6,8 @@ import { useCart } from "./CartContext";
 import Checkout from "./Checkout";
 import TipPicker from "./TipPicker";
 import { NO_TIP, tipCentsFor, type TipChoice } from "@/lib/tips";
-import { ItemRow } from "../MenuWrapper";
+import { ItemRow, ItemSheet } from "../MenuWrapper";
+import { useQuote } from "./useQuote";
 import { business } from "@/lib/business";
 import { getOpenStatus } from "@/lib/hours";
 import type { MenuItem } from "@/lib/catalog";
@@ -40,13 +41,21 @@ function PickupCard() {
   );
 }
 
-export default function OrderPage({ extras }: { extras: MenuItem[] }) {
-  const { items, totalCents, setQty, remove } = useCart();
+export default function OrderPage({ extras, menu }: { extras: MenuItem[]; menu: MenuItem[] }) {
+  const { items, totalCents, setQty, remove, replace } = useCart();
+  // Square's exact Florida sales tax for this cart (estimated until it answers).
+  const quote = useQuote(items, totalCents);
+  const taxCents = quote.taxCents;
+  // "Edit" on a cart line reopens the item panel with that line's choices.
+  const byId = new Map(menu.map((m) => [m.id, m]));
+  const [editing, setEditing] = useState<string | null>(null); // cart line key
+  const editLine = editing ? items.find((i) => i.key === editing) : undefined;
+  const editItem = editLine ? byId.get(editLine.id) : undefined;
   const [instructions, setInstructions] = useState("");
   // Optional tip, charged on top of the food (Square tip_money).
   const [tip, setTip] = useState<TipChoice>(NO_TIP);
-  const tipCents = tipCentsFor(tip, totalCents);
-  const chargeCents = totalCents + tipCents;
+  const tipCents = tipCentsFor(tip, totalCents); // tip on the food, before tax
+  const chargeCents = totalCents + taxCents + tipCents;
   const [done, setDone] = useState(false);
   // Avoid a flash of "empty" before the saved cart loads from localStorage.
   const [hydrated, setHydrated] = useState(false);
@@ -107,9 +116,16 @@ export default function OrderPage({ extras }: { extras: MenuItem[] }) {
                       <p className="text-white/50 text-sm">
                         {money(Math.round(i.price * 100))} {i.unit === "lb" ? "per lb" : "each"}
                       </p>
-                      <button type="button" onClick={() => remove(i.key)} className="mt-2 text-sm text-white/40 hover:text-brand-primary">
-                        Remove
-                      </button>
+                      <div className="mt-2 flex gap-4">
+                        {byId.has(i.id) && (
+                          <button type="button" onClick={() => setEditing(i.key)} className="text-sm text-white/60 hover:text-brand-primary">
+                            Edit
+                          </button>
+                        )}
+                        <button type="button" onClick={() => remove(i.key)} className="text-sm text-white/40 hover:text-brand-primary">
+                          Remove
+                        </button>
+                      </div>
                     </div>
                     <div className="flex flex-col items-end gap-2 shrink-0">
                       <span className="font-bold text-brand-primary">{money(Math.round(i.price * 100) * i.qty)}</span>
@@ -180,17 +196,19 @@ export default function OrderPage({ extras }: { extras: MenuItem[] }) {
                   <TipPicker subtotalCents={totalCents} value={tip} onChange={setTip} />
                 </div>
                 <dl className="mt-4 mb-5 border-b border-white/10 pb-4 space-y-1">
+                  <div className="flex justify-between text-sm text-white/70">
+                    <dt>Food</dt>
+                    <dd>{money(totalCents)}</dd>
+                  </div>
+                  <div className="flex justify-between text-sm text-white/70">
+                    <dt>Sales tax (6%)</dt>
+                    <dd>{money(taxCents)}</dd>
+                  </div>
                   {tipCents > 0 && (
-                    <>
-                      <div className="flex justify-between text-sm text-white/70">
-                        <dt>Food</dt>
-                        <dd>{money(totalCents)}</dd>
-                      </div>
-                      <div className="flex justify-between text-sm text-white/70">
-                        <dt>Tip</dt>
-                        <dd>{money(tipCents)}</dd>
-                      </div>
-                    </>
+                    <div className="flex justify-between text-sm text-white/70">
+                      <dt>Tip</dt>
+                      <dd>{money(tipCents)}</dd>
+                    </div>
                   )}
                   <div className="flex justify-between text-lg font-bold pt-1">
                     <dt>Total</dt>
@@ -199,7 +217,7 @@ export default function OrderPage({ extras }: { extras: MenuItem[] }) {
                 </dl>
               </>
             )}
-            <Checkout instructions={instructions} tipCents={tipCents} onDone={() => setDone(true)} />
+            <Checkout instructions={instructions} tipCents={tipCents} taxCents={taxCents} onDone={() => setDone(true)} />
           </section>
         </aside>
       </div>
@@ -217,6 +235,14 @@ export default function OrderPage({ extras }: { extras: MenuItem[] }) {
             </a>
           </div>
         </div>
+      )}
+      {editLine && editItem && (
+        <ItemSheet
+          item={editItem}
+          initial={{ picks: editLine.picks, note: editLine.note, qty: editLine.qty }}
+          onSave={(input) => replace(editLine.key, input)}
+          onClose={() => setEditing(null)}
+        />
       )}
     </div>
   );

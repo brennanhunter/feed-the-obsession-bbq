@@ -16,7 +16,7 @@ export type CartItem = {
   unit?: "lb"; // sold by the pound
 };
 
-type AddInput = Omit<CartItem, "key" | "qty"> & { qty?: number };
+export type CartInput = Omit<CartItem, "key" | "qty"> & { qty?: number };
 
 // Same item with different picks or a different request is its own line.
 const keyOf = (i: { id: string; picks?: ChoicePick[]; note?: string }) =>
@@ -24,7 +24,8 @@ const keyOf = (i: { id: string; picks?: ChoicePick[]; note?: string }) =>
 
 type Ctx = {
   items: CartItem[];
-  add: (i: AddInput) => void;
+  add: (i: CartInput) => void;
+  replace: (key: string, i: CartInput) => void; // edit a line in place (same spot in the list)
   remove: (key: string) => void;
   setQty: (key: string, qty: number) => void;
   clear: () => void;
@@ -64,6 +65,19 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   }, [items]);
 
+  const lineOf = (i: Omit<CartInput, "qty">, key: string, qty: number): CartItem => ({
+    key,
+    id: i.id,
+    title: i.title,
+    price: i.price,
+    qty,
+    ...(i.picks?.length ? { picks: i.picks } : {}),
+    ...(i.detail ? { detail: i.detail } : {}),
+    ...(i.note ? { note: i.note } : {}),
+    ...(i.leadDays ? { leadDays: i.leadDays } : {}),
+    ...(i.unit ? { unit: i.unit } : {}),
+  });
+
   const add: Ctx["add"] = ({ qty = 1, ...i }) =>
     setItems((prev) => {
       const key = keyOf(i);
@@ -71,21 +85,21 @@ export function CartProvider({ children }: { children: ReactNode }) {
       const found = prev.find((p) => p.key === key);
       return found
         ? prev.map((p) => (p.key === key ? { ...p, qty: p.qty + n } : p))
-        : [
-            ...prev,
-            {
-              key,
-              id: i.id,
-              title: i.title,
-              price: i.price,
-              qty: n,
-              ...(i.picks?.length ? { picks: i.picks } : {}),
-              ...(i.detail ? { detail: i.detail } : {}),
-              ...(i.note ? { note: i.note } : {}),
-              ...(i.leadDays ? { leadDays: i.leadDays } : {}),
-              ...(i.unit ? { unit: i.unit } : {}),
-            },
-          ];
+        : [...prev, lineOf(i, key, n)];
+    });
+
+  // Replace an edited line where it sits; if the edit makes it identical to
+  // another line, the two merge.
+  const replace: Ctx["replace"] = (oldKey, { qty = 1, ...i }) =>
+    setItems((prev) => {
+      const key = keyOf(i);
+      const n = Math.max(1, Math.floor(qty));
+      const at = prev.findIndex((p) => p.key === oldKey);
+      const rest = prev.filter((p) => p.key !== oldKey);
+      if (rest.some((p) => p.key === key)) return rest.map((p) => (p.key === key ? { ...p, qty: p.qty + n } : p));
+      const next = [...rest];
+      next.splice(at < 0 ? next.length : at, 0, lineOf(i, key, n));
+      return next;
     });
 
   const remove: Ctx["remove"] = (key) =>
@@ -103,7 +117,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const totalCents = items.reduce((s, i) => s + Math.round(i.price * 100) * i.qty, 0);
 
   return (
-    <CartCtx.Provider value={{ items, add, remove, setQty, clear, count, totalCents }}>
+    <CartCtx.Provider value={{ items, add, replace, remove, setQty, clear, count, totalCents }}>
       {children}
     </CartCtx.Provider>
   );
