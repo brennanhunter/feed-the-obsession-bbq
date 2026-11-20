@@ -22,19 +22,91 @@ export type MenuItem = {
   section: MenuSection;
   bestSeller?: boolean;
   notice?: string; // lead time / ordering rule shown under the item
-  proteinPicks?: number; // 2 Meat / 3 Meat plates: how many proteins to choose
-  sidePicks?: number; // plates that come with a side (and the $3 Side itself): pick which
+  choices?: Choice[]; // Square modifier lists on the item ("Pick your meats", "Pick your side")
   special?: SpecialRule; // Smoke Schedule items: which day(s) they can be ordered
   callToOrder?: boolean; // listed online but ordered by phone (owner's call)
   soldOut?: boolean; // the owner's "Sold out" toggle in Square, for the shop location
 };
 
-// Proteins a customer can pick for the 2 Meat and 3 Meat plates (owner's list,
-// Oct 2026). Validated server-side at checkout.
-export const PROTEINS = ["Brisket", "Ribs", "Pulled Pork", "Sliced Pork", "Chicken"] as const;
+// Choices come straight from the Square modifier lists attached to each item —
+// the same lists the POS and DoorDash use — so the owner edits options, counts
+// and prices in Square and every channel follows. Nothing here is hardcoded.
+export type ChoiceOption = { id: string; name: string; price: number }; // Square MODIFIER id; price in dollars
+export type Choice = {
+  id: string; // Square MODIFIER_LIST id
+  name: string; // as shown to customers, e.g. "Pick your meats"
+  label: string; // short ticket label, e.g. "Meats"
+  min: number; // 0 = optional
+  max: number; // 0 = no limit
+  repeats: boolean; // Square's allow_quantities: the same option more than once (double brisket)
+  options: ChoiceOption[];
+};
+export type ChoicePick = { id: string; qty: number }; // a chosen option and how many
 
-// Sides a plate can come with (printed menu, Oct 2026). Validated at checkout.
-export const SIDES = ["Beans", "Sliced Taters", "Coleslaw", "Chicken Salad", "Pitmaster's Choice"] as const;
+const ticketLabel = (listName: string) => {
+  const s = listName.replace(/^(pick|choose|select)\s+(your\s+|a\s+)?/i, "").trim() || listName;
+  return s.charAt(0).toUpperCase() + s.slice(1);
+};
+
+// "Meats: Brisket ×2 + Ribs · Side: Beans" — for the cart, emails and the kitchen.
+export function describePicks(choices: Choice[] | undefined, picks: ChoicePick[]): string {
+  if (!choices?.length || !picks.length) return "";
+  const qty = new Map(picks.map((p) => [p.id, p.qty]));
+  return choices
+    .map((c) => {
+      const chosen = c.options
+        .filter((o) => (qty.get(o.id) ?? 0) > 0)
+        .map((o) => (qty.get(o.id)! > 1 ? `${o.name} ×${qty.get(o.id)}` : o.name));
+      return chosen.length ? `${c.label}: ${chosen.join(" + ")}` : "";
+    })
+    .filter(Boolean)
+    .join(" · ");
+}
+
+// Dollars the chosen options add on top of the item price (0 for free options).
+export function picksPrice(choices: Choice[] | undefined, picks: ChoicePick[]): number {
+  const price = new Map((choices ?? []).flatMap((c) => c.options.map((o) => [o.id, o.price] as const)));
+  return picks.reduce((s, p) => s + (price.get(p.id) ?? 0) * p.qty, 0);
+}
+
+// Checks a set of picks against the item's Square rules. Used by checkout (the
+// source of truth) and by the menu to know when "Add" can be pressed.
+export function checkPicks(
+  item: Pick<MenuItem, "title" | "choices">,
+  picks: ChoicePick[]
+): { ok: true; picks: ChoicePick[] } | { ok: false; error: string } {
+  const merged = new Map<string, number>();
+  for (const p of picks) {
+    const n = Math.floor(Number(p?.qty));
+    if (!p?.id || !Number.isFinite(n) || n < 1) return { ok: false, error: `Invalid choice for the ${item.title}` };
+    merged.set(String(p.id), (merged.get(String(p.id)) ?? 0) + n);
+  }
+  const known = new Set((item.choices ?? []).flatMap((c) => c.options.map((o) => o.id)));
+  for (const id of merged.keys())
+    if (!known.has(id)) return { ok: false, error: `That option isn't available for the ${item.title} right now` };
+  for (const c of item.choices ?? []) {
+    const counts = c.options.map((o) => merged.get(o.id) ?? 0);
+    const total = counts.reduce((s, n) => s + n, 0);
+    const what = c.label.toLowerCase();
+    if (!c.repeats && counts.some((n) => n > 1))
+      return { ok: false, error: `Each ${what} choice can only be picked once for the ${item.title}` };
+    if (total < c.min)
+      return {
+        ok: false,
+        error: `Please pick ${c.max === c.min ? c.min : `at least ${c.min}`} ${what} for the ${item.title}`,
+      };
+    if (c.max > 0 && total > c.max)
+      return { ok: false, error: `Please pick no more than ${c.max} ${what} for the ${item.title}` };
+  }
+  // Stable order (choice, then option order) so the same picks always match.
+  const order = (item.choices ?? []).flatMap((c) => c.options.map((o) => o.id));
+  return {
+    ok: true,
+    picks: [...merged.entries()]
+      .sort((a, b) => order.indexOf(a[0]) - order.indexOf(b[0]))
+      .map(([id, qty]) => ({ id, qty })),
+  };
+}
 
 // Only this Square category is the live online menu; the account also holds old
 // event menus (OB'S, Sorry Charlie's, St. Judes) we deliberately ignore.
@@ -101,25 +173,6 @@ function callToOrderFor(title: string): boolean {
   return title.toLowerCase().includes("bbq sauce");
 }
 
-// Anything sold "with a side" (and the à-la-carte Side) needs the customer to
-// say which one, or the kitchen has to guess at pickup.
-function sidePicksFor(title: string, description: string): number | undefined {
-  const t = title.toLowerCase();
-  const text = `${t} ${description.toLowerCase()}`;
-  if (t.includes("no side") || t.includes("sampler") || t.includes("full rack")) return undefined;
-  if (t.trim() === "side") return 1;
-  if (t.includes("plate")) return 1;
-  if (/\bsides?\b/.test(text)) return 1;
-  return undefined;
-}
-
-function proteinPicksFor(title: string): number | undefined {
-  const t = title.toLowerCase();
-  if (t.startsWith("2 meat")) return 2;
-  if (t.startsWith("3 meat")) return 3;
-  return undefined;
-}
-
 // Square items carry no descriptions/images, so we enrich from the branded menu.
 function describe(title: string): string {
   const t = title.toLowerCase();
@@ -170,7 +223,7 @@ const TTL_MS = 60_000;
 export async function getMenu(): Promise<MenuItem[]> {
   if (cache && Date.now() - cache.at < TTL_MS) return cache.items;
 
-  const page = await square.catalog.list({ types: "ITEM,CATEGORY" });
+  const page = await square.catalog.list({ types: "ITEM,CATEGORY,MODIFIER_LIST" });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const objects: any[] = [];
   for await (const o of page) objects.push(o);
@@ -178,6 +231,61 @@ export async function getMenu(): Promise<MenuItem[]> {
   const catName: Record<string, string> = {};
   for (const o of objects)
     if (o.type === "CATEGORY") catName[o.id] = (o.categoryData?.name || "").trim();
+
+  // Square modifier lists by id. Options hidden online or marked sold out at the
+  // shop are left off; ordinal keeps the owner's order from Square.
+  const ord = (x: unknown) => (x == null ? 0 : Number(x));
+  const lists = new Map<string, { name: string; min: number; max: number; repeats: boolean; options: ChoiceOption[] }>();
+  for (const o of objects) {
+    if (o.type !== "MODIFIER_LIST" || o.isDeleted) continue;
+    const ld = o.modifierListData || {};
+    const options: ChoiceOption[] = [...(ld.modifiers || [])]
+      .filter(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (m: any) =>
+          m?.id &&
+          !m.isDeleted &&
+          !m.modifierData?.hiddenOnline &&
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          !(m.modifierData?.locationOverrides || []).some((l: any) => l?.locationId === LOCATION_ID && l?.soldOut)
+      )
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .sort((a: any, b: any) => ord(a.modifierData?.ordinal) - ord(b.modifierData?.ordinal))
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .map((m: any) => ({ id: m.id, name: (m.modifierData?.name || "").trim(), price: money(m.modifierData?.priceMoney) }));
+    lists.set(o.id, {
+      name: (ld.name || "").trim(),
+      min: ord(ld.minSelectedModifiers),
+      max: ord(ld.maxSelectedModifiers),
+      repeats: ld.allowQuantities === true,
+      options,
+    });
+  }
+
+  // The lists an item uses, with the item's own min/max winning over the list's
+  // (Square: -1 or unset on the item means "use the list's").
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const choicesFor = (d: any): Choice[] =>
+    [...(d.modifierListInfo || [])]
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .filter((info: any) => info?.enabled !== false && !info?.hiddenFromCustomer && lists.has(info.modifierListId))
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .sort((a: any, b: any) => ord(a.ordinal) - ord(b.ordinal))
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .map((info: any) => {
+        const l = lists.get(info.modifierListId)!;
+        const pickLimit = (own: unknown, fallback: number) => (own != null && ord(own) >= 0 ? ord(own) : Math.max(fallback, 0));
+        return {
+          id: info.modifierListId as string,
+          name: l.name,
+          label: ticketLabel(l.name),
+          min: pickLimit(info.minSelectedModifiers, l.min),
+          max: pickLimit(info.maxSelectedModifiers, l.max),
+          repeats: l.repeats,
+          options: l.options,
+        };
+      })
+      .filter((c) => c.options.length > 0);
 
   const items: MenuItem[] = [];
   for (const o of objects) {
@@ -188,6 +296,7 @@ export async function getMenu(): Promise<MenuItem[]> {
     if (cat.toLowerCase() !== MENU_CATEGORY) continue;
 
     const baseTitle = (d.name || "").trim();
+    const choices = choicesFor(d);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const variations: any[] = (d.variations || []).filter(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -227,8 +336,7 @@ export async function getMenu(): Promise<MenuItem[]> {
         section,
         ...(BEST_SELLERS.includes(baseTitle.toLowerCase()) ? { bestSeller: true } : {}),
         ...(notice ? { notice } : {}),
-        ...(proteinPicksFor(baseTitle) ? { proteinPicks: proteinPicksFor(baseTitle) } : {}),
-        ...(sidePicksFor(baseTitle, description) ? { sidePicks: sidePicksFor(baseTitle, description) } : {}),
+        ...(choices.length ? { choices } : {}),
         ...(specialRuleFor(baseTitle) ? { special: specialRuleFor(baseTitle) } : {}),
         ...(callToOrderFor(baseTitle) ? { callToOrder: true } : {}),
         ...(soldOut ? { soldOut: true } : {}),

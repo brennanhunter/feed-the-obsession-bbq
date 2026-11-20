@@ -1,22 +1,22 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import type { ChoicePick } from "@/lib/catalog";
 
 export type CartItem = {
-  key: string; // id, plus the protein picks for 2/3 Meat plates
+  key: string; // id, plus the chosen options (same plate, different picks = separate line)
   id: string; // Square catalog (item variation) id
   title: string;
-  price: number; // dollars
+  price: number; // dollars, including any paid options
   qty: number;
-  proteins?: string[]; // 2 Meat / 3 Meat plates only
-  side?: string; // plates with a side / the Side item
+  picks?: ChoicePick[]; // Square modifier ids + counts (meats, side, ...)
+  detail?: string; // "Meats: Brisket ×2 + Ribs · Side: Beans", for display
 };
 
-type AddInput = { id: string; title: string; price: number; proteins?: string[]; side?: string };
+type AddInput = { id: string; title: string; price: number; picks?: ChoicePick[]; detail?: string };
 
-// Same plate with different meats or a different side is a separate line.
-const keyOf = (i: { id: string; proteins?: string[]; side?: string }) =>
-  [i.id, i.proteins?.length ? i.proteins.join("+") : "", i.side ?? ""].filter(Boolean).join("|");
+const keyOf = (i: { id: string; picks?: ChoicePick[] }) =>
+  [i.id, ...(i.picks ?? []).map((p) => `${p.id}:${p.qty}`)].join("|");
 
 type Ctx = {
   items: CartItem[];
@@ -38,12 +38,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
     try {
       const saved = localStorage.getItem("fto-cart");
       if (saved) {
-        // Carts saved before protein picks existed have no key — derive it.
-        const parsed = JSON.parse(saved) as Partial<CartItem>[];
+        // Lines saved by the older menu (fixed meat/side lists, Nov 2026) can't be
+        // checked out against Square's options, so they're dropped; re-add them.
+        const parsed = JSON.parse(saved) as (Partial<CartItem> & { proteins?: unknown; side?: unknown })[];
         setItems(
           parsed
-            .filter((i): i is CartItem & Partial<CartItem> => Boolean(i && i.id))
-            .map((i) => ({ ...i, key: i.key ?? keyOf({ id: i.id, proteins: i.proteins, side: i.side }) }))
+            .filter((i): i is CartItem => Boolean(i && i.id && i.key) && i.proteins == null && i.side == null)
+            .map((i) => ({ ...i, key: keyOf(i) }))
         );
       }
     } catch {
@@ -73,8 +74,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
               title: i.title,
               price: i.price,
               qty: 1,
-              ...(i.proteins?.length ? { proteins: i.proteins } : {}),
-              ...(i.side ? { side: i.side } : {}),
+              ...(i.picks?.length ? { picks: i.picks } : {}),
+              ...(i.detail ? { detail: i.detail } : {}),
             },
           ];
     });

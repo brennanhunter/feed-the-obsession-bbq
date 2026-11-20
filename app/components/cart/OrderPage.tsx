@@ -99,11 +99,7 @@ export default function OrderPage({ extras }: { extras: MenuItem[] }) {
                   <li key={i.key} className="py-4 flex items-start justify-between gap-4">
                     <div className="min-w-0 flex-1">
                       <p className="font-semibold text-lg leading-snug">{i.title}</p>
-                      {(i.proteins || i.side) && (
-                        <p className="text-brand-primary text-sm">
-                          {[i.proteins?.join(" + "), i.side ? `Side: ${i.side}` : null].filter(Boolean).join(" · ")}
-                        </p>
-                      )}
+                      {i.detail && <p className="text-brand-primary text-sm">{i.detail}</p>}
                       <p className="text-white/50 text-sm">{money(Math.round(i.price * 100))} each</p>
                       <button type="button" onClick={() => remove(i.key)} className="mt-2 text-sm text-white/40 hover:text-brand-primary">
                         Remove

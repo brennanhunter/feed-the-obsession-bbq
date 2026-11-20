@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { square, LOCATION_ID } from "@/lib/square";
-import { getMenuMap, PROTEINS, SIDES } from "@/lib/catalog";
+import { checkPicks, describePicks, getMenuMap, picksPrice, type ChoicePick } from "@/lib/catalog";
 import { isSpecialAvailable, specialLabel } from "@/lib/specials";
 import { sendEmail } from "@/lib/mailer";
 import { orderConfirmationEmail, type OrderEmailLine } from "@/lib/order-email";
@@ -12,7 +12,7 @@ import { MAX_TIP_CENTS } from "@/lib/tips";
 // Browser sends only Square catalog ids + quantities. The server validates each
 // id against the live McSorleys menu and lets Square price the order from the
 // catalog — so a tampered request can never change what gets charged.
-type CartLine = { id: string; quantity: number; proteins?: string[]; side?: string };
+type CartLine = { id: string; quantity: number; picks?: ChoicePick[] };
 type Body = {
   sourceId: string;
   items: CartLine[];
@@ -87,43 +87,33 @@ export async function POST(req: Request) {
         status: 400,
       });
     }
-    // 2 Meat / 3 Meat plates must carry exactly N picks from the owner's list;
-    // they ride to the kitchen as the line-item note on the Square ticket.
-    const picks = Array.isArray(line.proteins) ? line.proteins.map(String) : [];
-    let detail: string | undefined;
-    if (item.proteinPicks) {
-      const allowed = PROTEINS as readonly string[];
-      const valid =
-        picks.length === item.proteinPicks &&
-        picks.every((p) => allowed.includes(p)) &&
-        new Set(picks).size === picks.length;
-      if (!valid) {
-        return new Response(`Please pick ${item.proteinPicks} meats for the ${item.title}`, {
-          status: 400,
-        });
-      }
-      detail = picks.join(" + ");
-    }
     // Smoke Schedule items only on their day (checked against the pickup day).
     if (item.special && !isSpecialAvailable(item.special, servedAt)) {
       return new Response(`${item.title} is ${specialLabel(item.special).toLowerCase()} — not available for that pickup time`, {
         status: 400,
       });
     }
-    // Plates with a side: the kitchen needs to know which one.
-    if (item.sidePicks) {
-      const side = String(line.side ?? "");
-      if (!(SIDES as readonly string[]).includes(side)) {
-        return new Response(`Please pick a side for the ${item.title}`, { status: 400 });
-      }
-      detail = [detail, `Side: ${side}`].filter(Boolean).join(" · ");
+    // Choices (meats, side, ...) are the item's Square modifier lists: checked
+    // against Square's own min/max/doubles rules, then sent as modifiers so the
+    // ticket reads exactly like a POS or DoorDash order.
+    let picks: ChoicePick[] = [];
+    if (item.choices?.length) {
+      const checked = checkPicks(item, Array.isArray(line.picks) ? line.picks : []);
+      if (!checked.ok) return new Response(checked.error, { status: 400 });
+      picks = checked.picks;
     }
+    const detail = describePicks(item.choices, picks) || undefined;
     lineItems.push({
       catalogObjectId: item.id,
       quantity: String(qty),
-      ...(detail ? { note: detail } : {}),
+      ...(picks.length ? { modifiers: picks.map((p) => ({ catalogObjectId: p.id, quantity: String(p.qty) })) } : {}),
     });
-    emailLines.push({ title: item.title, qty, price: item.price, ...(detail ? { detail } : {}) });
+    emailLines.push({
+      title: item.title,
+      qty,
+      price: item.price + picksPrice(item.choices, picks),
+      ...(detail ? { detail } : {}),
+    });
   }
 
   const channelNote =

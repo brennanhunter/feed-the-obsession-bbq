@@ -2,7 +2,16 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { MENU_SECTIONS, PROTEINS, SIDES, type MenuItem, type MenuSection } from "@/lib/catalog";
+import {
+  MENU_SECTIONS,
+  checkPicks,
+  describePicks,
+  picksPrice,
+  type Choice,
+  type ChoicePick,
+  type MenuItem,
+  type MenuSection,
+} from "@/lib/catalog";
 import { isSpecialAvailable, specialLabel } from "@/lib/specials";
 import { business } from "@/lib/business";
 import { useCart } from "./cart/CartContext";
@@ -27,27 +36,71 @@ const SECTION_NOTE: Partial<Record<MenuSection, string>> = {
   "Whole Cuts": "Order ahead — call 386-507-4309. Full rack needs 24 hours, whole brisket 3 days.",
 };
 
-function Chips({
-  label, options, picked, onToggle,
-}: { label: string; options: readonly string[]; picked: string[]; onToggle: (v: string) => void }) {
+// One Square modifier list ("Pick your meats", "Pick your side", ...). Rules come
+// from Square: a single pick swaps on tap; when doubles are allowed, tapping adds
+// another and "−" takes one away.
+function ChoiceGroup({
+  choice, counts, onAdd, onRemove,
+}: {
+  choice: Choice;
+  counts: Record<string, number>;
+  onAdd: (id: string) => void;
+  onRemove: (id: string) => void;
+}) {
+  const total = choice.options.reduce((s, o) => s + (counts[o.id] ?? 0), 0);
+  const left = Math.max(choice.min - total, 0);
+  const full = choice.max > 0 && total >= choice.max;
+  const single = choice.max === 1;
+  const rule =
+    choice.min > 0 && choice.min === choice.max
+      ? `pick ${choice.min}`
+      : choice.min > 0
+        ? `pick at least ${choice.min}`
+        : choice.max > 0
+          ? `optional, up to ${choice.max}`
+          : "optional";
   return (
     <div className="mt-2">
-      <p className="text-xs text-white/60 mb-1.5">{label}</p>
+      <p className="text-xs text-white/60 mb-1.5">
+        {choice.name}: {rule}
+        {choice.repeats && !single ? " (doubles OK)" : ""}
+        {left > 0 ? ` · ${left} to go` : ""}
+      </p>
       <div className="flex flex-wrap gap-2">
-        {options.map((p) => {
-          const on = picked.includes(p);
+        {choice.options.map((o) => {
+          const n = counts[o.id] ?? 0;
+          const on = n > 0;
+          const tap = () => (single || !choice.repeats ? (on ? onRemove(o.id) : onAdd(o.id)) : onAdd(o.id));
+          const disabled = !single && (choice.repeats ? full : !on && full);
           return (
-            <button
-              key={p}
-              type="button"
-              onClick={() => onToggle(p)}
-              aria-pressed={on}
-              className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
+            <span
+              key={o.id}
+              className={`inline-flex items-stretch rounded-full border text-sm transition-colors ${
                 on ? "bg-brand-primary border-brand-primary text-white" : "border-white/25 text-white/80 hover:border-brand-primary"
               }`}
             >
-              {p}
-            </button>
+              <button
+                type="button"
+                onClick={tap}
+                disabled={disabled}
+                aria-pressed={on}
+                className="px-3 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {o.name}
+                {n > 1 ? ` ×${n}` : ""}
+                {o.price > 0 ? ` +$${o.price.toFixed(2)}` : ""}
+              </button>
+              {on && choice.repeats && !single && (
+                <button
+                  type="button"
+                  onClick={() => onRemove(o.id)}
+                  aria-label={`Remove one ${o.name}`}
+                  className="pl-2 pr-3 py-1.5 border-l border-white/30"
+                >
+                  −
+                </button>
+              )}
+            </span>
           );
         })}
       </div>
@@ -57,12 +110,8 @@ function Chips({
 
 export function ItemRow({ item }: { item: MenuItem }) {
   const { add } = useCart();
-  // 2 Meat / 3 Meat plates: the customer picks their proteins before adding.
-  const need = item.proteinPicks ?? 0;
-  const [picks, setPicks] = useState<string[]>([]);
-  // Plates with a side (and the Side item): pick which side.
-  const needSide = (item.sidePicks ?? 0) > 0;
-  const [side, setSide] = useState<string>("");
+  // Chosen options (Square modifier id -> count) for this item's choices.
+  const [counts, setCounts] = useState<Record<string, number>>({});
   // Smoke Schedule items are only orderable on their day (shop time). Computed on
   // the client so the page can stay cached and the day can roll over.
   const [available, setAvailable] = useState(true);
@@ -74,26 +123,50 @@ export function ItemRow({ item }: { item: MenuItem }) {
     return () => clearInterval(id);
   }, [item.special]);
 
+  const choices = item.choices ?? [];
+  const picks: ChoicePick[] = Object.entries(counts)
+    .filter(([, n]) => n > 0)
+    .map(([id, qty]) => ({ id, qty }));
+  const checked = checkPicks(item, picks);
   const orderable = available && !item.soldOut;
-  const ready = orderable && (need === 0 || picks.length === need) && (!needSide || side !== "");
-  const toggle = (p: string) =>
-    setPicks((prev) =>
-      prev.includes(p) ? prev.filter((x) => x !== p) : prev.length < need ? [...prev, p] : prev
-    );
+  const ready = orderable && checked.ok;
+
+  const addOption = (choice: Choice, id: string) =>
+    setCounts((prev) => {
+      const total = choice.options.reduce((s, o) => s + (prev[o.id] ?? 0), 0);
+      if (choice.max === 1) {
+        const next = { ...prev };
+        for (const o of choice.options) delete next[o.id];
+        return { ...next, [id]: 1 };
+      }
+      if (choice.max > 0 && total >= choice.max) return prev;
+      if (!choice.repeats && prev[id]) return prev;
+      return { ...prev, [id]: (prev[id] ?? 0) + 1 };
+    });
+  const removeOption = (id: string) =>
+    setCounts((prev) => {
+      const next = { ...prev };
+      if ((next[id] ?? 0) > 1) next[id] -= 1;
+      else delete next[id];
+      return next;
+    });
+
   const onAdd = () => {
+    if (!checked.ok) return;
     add({
       id: item.id,
       title: item.title,
-      price: item.price,
-      proteins: need ? picks : undefined,
-      side: needSide ? side : undefined,
+      price: item.price + picksPrice(choices, checked.picks),
+      ...(checked.picks.length ? { picks: checked.picks, detail: describePicks(choices, checked.picks) } : {}),
     });
-    if (need) setPicks([]);
-    if (needSide) setSide("");
+    setCounts({});
   };
-  const missing: string[] = [];
-  if (need && picks.length < need) missing.push(`${need - picks.length} meat${need - picks.length === 1 ? "" : "s"}`);
-  if (needSide && !side) missing.push("a side");
+  const missing = choices
+    .map((c) => {
+      const total = c.options.reduce((s, o) => s + (counts[o.id] ?? 0), 0);
+      return total < c.min ? `${c.min - total} ${c.label.toLowerCase()}` : "";
+    })
+    .filter(Boolean);
 
   return (
     <div className={`py-3 border-b border-white/10 ${orderable ? "" : "opacity-60"}`}>
@@ -153,22 +226,17 @@ export function ItemRow({ item }: { item: MenuItem }) {
           {available ? `On today — ${specialLabel(item.special)}` : `Not today — ${specialLabel(item.special)}`}
         </p>
       )}
-      {orderable && need > 0 && (
-        <Chips
-          label={`Pick ${need} meats${picks.length < need ? ` — ${need - picks.length} to go` : ""}:`}
-          options={PROTEINS}
-          picked={picks}
-          onToggle={toggle}
-        />
-      )}
-      {orderable && needSide && (
-        <Chips
-          label={side ? `Side: ${side}` : "Pick your side:"}
-          options={SIDES}
-          picked={side ? [side] : []}
-          onToggle={(v) => setSide((prev) => (prev === v ? "" : v))}
-        />
-      )}
+      {orderable &&
+        !item.callToOrder &&
+        choices.map((c) => (
+          <ChoiceGroup
+            key={c.id}
+            choice={c}
+            counts={counts}
+            onAdd={(id) => addOption(c, id)}
+            onRemove={removeOption}
+          />
+        ))}
     </div>
   );
 }
