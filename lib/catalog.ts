@@ -333,7 +333,7 @@ export async function getMenu(): Promise<MenuItem[]> {
       // The Square description may carry the lead time too; the notice line
       // below the item already says it, so drop that sentence from the blurb.
       const description = (d.description || describe(baseTitle))
-        .replace(notice ? /\s*[^.]*notice[^.]*\.?/i : /$^/, "")
+        .replace(notice ? /\s*[^.]*\b(notice|ahead)\b[^.]*\.?/gi : /$^/, "")
         .trim();
       items.push({
         id,
