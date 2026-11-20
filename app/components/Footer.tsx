@@ -94,7 +94,7 @@ export default function Footer() {
           </div>
         </div>
         <p className="text-center mt-10 text-white/50">
-          © 2025 Feed The Obsession BBQ. All Rights Reserved.
+          © {new Date().getFullYear()} Feed The Obsession BBQ. All Rights Reserved.
         </p>
       </div>
     </div>

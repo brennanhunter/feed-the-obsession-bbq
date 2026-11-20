@@ -1,18 +1,26 @@
 import Header from "./components/Header";
 import LogoOverlay from "./components/LogoOverlay";
-import Carousel from "./components/Carousel";
-import FindTheSmoke from "./components/FindTheSmoke";
-import MenuPreview from "./components/MenuPreview";
+import Hero from "./components/home/Hero";
+import InfoStrip, { type TodaySpecial } from "./components/home/InfoStrip";
+import Favorites from "./components/home/Favorites";
 import Reviews from "./components/Reviews";
-import CustomSmokers from "./components/CustomSmokers";
-import Gallery from "./components/Gallery";
+import Story from "./components/home/Story";
+import SmokerStrip from "./components/home/SmokerStrip";
 import Footer from "./components/Footer";
 import { getMenu } from "@/lib/catalog";
+import { getOpenStatus } from "@/lib/hours";
+import { isSpecialAvailable } from "@/lib/specials";
 
 export const revalidate = 60;
 
 export default async function Home() {
   const menu = await getMenu();
+  const status = getOpenStatus();
+  const todays = menu.find((i) => i.special && !i.soldOut && isSpecialAvailable(i.special));
+  const special: TodaySpecial = todays
+    ? { name: todays.title.replace(/^\w+day special\s*/i, ""), price: todays.price }
+    : null;
+
   return (
     <div className="min-h-screen bg-black text-white">
       {/* Primary SEO heading — one H1 per page, keyword + location. Visually hidden
@@ -24,12 +32,12 @@ export default async function Home() {
       {/* <BikeWeekModal /> */}
       <Header overlayLogo />
       <LogoOverlay />
-      <Carousel />
-      <FindTheSmoke />
-      <MenuPreview items={menu} />
+      <Hero status={status} />
+      <InfoStrip status={status} special={special} />
+      <Favorites items={menu} />
       <Reviews />
-      <CustomSmokers />
-      <Gallery />
+      <Story />
+      <SmokerStrip />
       <Footer />
     </div>
   );
