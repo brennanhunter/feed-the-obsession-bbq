@@ -114,6 +114,12 @@ function ChoiceStep({
           );
         })}
       </div>
+      {/* Square options can't carry a description, so explain the one that needs it. */}
+      {choice.options.some((o) => (counts[o.id] ?? 0) > 0 && /pitmaster/i.test(o.name)) && (
+        <p className="mt-2 text-xs text-white/60">
+          Pitmaster&apos;s Choice is our rotating side, picked by the pitmaster. It changes every week.
+        </p>
+      )}
     </section>
   );
 }

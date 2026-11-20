@@ -1,11 +1,26 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import Logo from "./Logo";
 import { useState } from "react";
+import { useCart } from "./cart/CartContext";
 
 export default function Header({ overlayLogo = false }: { overlayLogo?: boolean }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const pathname = usePathname();
+  const { count } = useCart();
+  // The big red button always points somewhere new: "View Order" once there's
+  // food in the cart, "Order Now" (to the menu) otherwise. It hides where it would
+  // just point at the page you're on (the menu with an empty cart, and checkout).
+  const cta =
+    pathname === "/order"
+      ? null
+      : count > 0
+        ? { href: "/order", label: `View Order (${count})` }
+        : pathname === "/menu"
+          ? null
+          : { href: "/menu", label: "Order Now" };
 
   return (
     <header className="h-[5.5rem] sticky top-0 z-50 w-full bg-brand-secondary">
@@ -40,12 +55,14 @@ export default function Header({ overlayLogo = false }: { overlayLogo?: boolean 
 
         {/* Right Side */}
         <div className="flex gap-x-3 sm:gap-x-4 items-center">
-          <Link
-            href="/menu"
-            className="inline-flex items-center px-4 py-2 sm:px-6 sm:py-2.5 rounded-full bg-brand-primary text-white font-bold uppercase tracking-wide text-sm sm:text-base hover:opacity-80 transition-all shadow-md"
-          >
-            Order Now
-          </Link>
+          {cta && (
+            <Link
+              href={cta.href}
+              className="inline-flex items-center px-4 py-2 sm:px-6 sm:py-2.5 rounded-full bg-brand-primary text-white font-bold uppercase tracking-wide text-sm sm:text-base hover:opacity-80 transition-all shadow-md whitespace-nowrap"
+            >
+              {cta.label}
+            </Link>
+          )}
           {/* BIKE WEEK - uncomment for next bike week
           <button
             onClick={() => window.dispatchEvent(new Event('open-bike-week-modal'))}
