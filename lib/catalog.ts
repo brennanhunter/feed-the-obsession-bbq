@@ -137,7 +137,7 @@ function sectionFor(name: string): MenuSection {
   if (n.includes("meat") || n.includes("sampler")) return "Combos";
   if (n.trim() === "side") return "Sides";
   // Sauce bottles, extra sauce, add-on chicken: not plates.
-  if (n.includes("sauce") || n.includes("ranch") || n.trim() === "chicken") return "Extras";
+  if (n.includes("sauce") || n.includes("ranch") || n.trim() === "chicken" || n.startsWith("add ")) return "Extras";
   return "Plates";
 }
 
@@ -172,7 +172,9 @@ function noticeFor(section: MenuSection): string | undefined {
 // Sauce bottles are listed online but sold over the phone / at the counter
 // (owner's call, Oct 2026).
 function callToOrderFor(title: string): boolean {
-  return title.toLowerCase().includes("bbq sauce");
+  const t = title.toLowerCase();
+  // Jar refills need the customer's empty jar, so they're done at the counter too.
+  return t.includes("bbq sauce") || t.includes("refill");
 }
 
 // Square items carry no descriptions/images, so we enrich from the branded menu.
@@ -205,6 +207,8 @@ function describe(title: string): string {
     "8oz bbq sauce": "Sweet Heat homemade sauce in an 8 oz mason jar. Bring the jar back and refill for $10.",
     "16oz bbq sauce": "Sweet Heat homemade sauce in an 8 oz mason jar. Bring the jar back and refill for $10.",
     chicken: "Add a piece of smoked chicken to any order.",
+    "add chicken (piece)": "Add a piece of smoked chicken to any order.",
+    "sauce jar refill": "Bring your empty 8 oz jar back and we'll fill it with Sweet Heat for $10.",
   };
   if (map[t]) return map[t];
   if (t.includes("special")) return "This week's rotating weekday special.";
@@ -293,6 +297,8 @@ export async function getMenu(): Promise<MenuItem[]> {
   for (const o of objects) {
     if (o.type !== "ITEM") continue;
     const d = o.itemData || {};
+    // Archived in Square (old event items, duplicates): gone from the POS, gone here.
+    if (d.isArchived) continue;
     const catId = d.categoryId || d.reportingCategory?.id || d.categories?.[0]?.id;
     const cat = (catId && catName[catId]) || "";
     if (cat.toLowerCase() !== MENU_CATEGORY) continue;
