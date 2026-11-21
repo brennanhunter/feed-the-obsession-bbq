@@ -5,6 +5,12 @@ import Script from "next/script";
 import { useCart } from "./CartContext";
 import { business } from "@/lib/business";
 import { getOpenStatus, getPickupOptions, type PickupOption } from "@/lib/hours";
+import { cleanAddress, DELIVERY_AREA_LABEL, DELIVERY_MIN_CENTS, zipDeliverable } from "@/lib/delivery";
+
+export type DeliveryQuote = { feeCents: number; dropoffEta: string };
+const money = (cents: number) => `$${(cents / 100).toFixed(2)}`;
+const etTime = (iso: string) =>
+  new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "America/New_York" });
 
 const APP_ID = process.env.NEXT_PUBLIC_SQUARE_APPLICATION_ID;
 const LOCATION_ID = process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID;
@@ -33,13 +39,27 @@ export default function Checkout({
   instructions,
   tipCents = 0,
   taxCents = 0,
+  mode = "PICKUP",
+  feesCents = 0,
+  onDeliveryQuote,
 }: {
   onDone?: () => void;
   instructions?: string;
-  tipCents?: number; // optional tip picked on the order page, charged on top of the food
+  tipCents?: number; // optional tip picked on the order page (crew tip, or the driver's on delivery)
   taxCents?: number; // Florida sales tax from Square's quote (Square applies it at checkout)
+  mode?: "PICKUP" | "DELIVERY";
+  feesCents?: number; // delivery: Uber fee + service fee, shown in the Pay amount
+  onDeliveryQuote?: (q: DeliveryQuote | null) => void; // live Uber price, up to the order page's totals
 }) {
   const { items, totalCents, clear } = useCart();
+  const isDelivery = mode === "DELIVERY";
+  // Delivery address (remembered on this device with the name/phone/email).
+  const [street, setStreet] = useState("");
+  const [unit, setUnit] = useState("");
+  const [city, setCity] = useState("DeLand");
+  const [zip, setZip] = useState("");
+  const [dropNotes, setDropNotes] = useState("");
+  const [trackingUrl, setTrackingUrl] = useState("");
   const [tipped, setTipped] = useState(false); // remembered past clear() for the thank-you
   const [channel, setChannel] = useState<"TAKE_OUT" | "DINE_IN">("TAKE_OUT");
   const [table, setTable] = useState("");
@@ -57,12 +77,22 @@ export default function Checkout({
   useEffect(() => {
     try {
       const saved = JSON.parse(localStorage.getItem("fto-customer") || "null") as
-        | { name?: string; phone?: string; email?: string }
+        | {
+            name?: string;
+            phone?: string;
+            email?: string;
+            address?: { street?: string; unit?: string; city?: string; zip?: string; notes?: string };
+          }
         | null;
       if (saved) {
         if (saved.name) setName(saved.name);
         if (saved.phone) setPhone(saved.phone);
         if (saved.email) setEmail(saved.email);
+        if (saved.address?.street) setStreet(saved.address.street);
+        if (saved.address?.unit) setUnit(saved.address.unit);
+        if (saved.address?.city) setCity(saved.address.city);
+        if (saved.address?.zip) setZip(saved.address.zip);
+        if (saved.address?.notes) setDropNotes(saved.address.notes);
       }
     } catch {
       /* storage blocked or bad data: start blank */
@@ -84,6 +114,47 @@ export default function Checkout({
   for (const sl of pickupOpts?.slots ?? []) if (!pickupDays.includes(sl.day)) pickupDays.push(sl.day);
   const pickupDay =
     pickup === "asap" ? "Today" : pickupOpts?.slots.find((sl) => sl.iso === pickup)?.day ?? pickupDays[0] ?? "";
+  // Live Uber price for the address + delivery time (debounced). Keyed by the
+  // inputs so a stale answer is never shown for a different address or time.
+  const addr = isDelivery ? cleanAddress({ street, unit, city, zip, notes: dropNotes }) : null;
+  const zipOk = addr ? zipDeliverable(addr.zip) : false;
+  const [requote, setRequote] = useState(0);
+  const quoteKey = addr && zipOk ? JSON.stringify([addr.street, addr.unit, addr.city, addr.zip, pickup, requote]) : "";
+  const [dq, setDq] = useState<{ key: string; quote?: DeliveryQuote; error?: string } | null>(null);
+  useEffect(() => {
+    if (!quoteKey || !addr) return;
+    const ctrl = new AbortController();
+    const t = setTimeout(async () => {
+      try {
+        const res = await fetch("/api/delivery/quote", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ address: addr, phone, pickupAt: pickup === "asap" ? undefined : pickup, foodCents: totalCents }),
+          signal: ctrl.signal,
+        });
+        if (!res.ok) {
+          setDq({ key: quoteKey, error: (await res.text()) || "Couldn't price delivery to that address." });
+          return;
+        }
+        setDq({ key: quoteKey, quote: (await res.json()) as DeliveryQuote });
+      } catch (e) {
+        if ((e as Error).name !== "AbortError") setDq({ key: quoteKey, error: "Couldn't reach Uber — check your connection." });
+      }
+    }, 600);
+    return () => {
+      clearTimeout(t);
+      ctrl.abort();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [quoteKey]);
+  const liveQuote = isDelivery && dq && dq.key === quoteKey ? dq : null;
+  const deliveryQuote = liveQuote?.quote ?? null;
+  useEffect(() => {
+    onDeliveryQuote?.(deliveryQuote);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deliveryQuote?.feeCents, deliveryQuote?.dropoffEta]);
+  const underMin = isDelivery && totalCents < DELIVERY_MIN_CENTS;
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const cardRef = useRef<any>(null);
   const initStarted = useRef(false); // reserve synchronously so the form attaches once
@@ -116,7 +187,25 @@ export default function Checkout({
       setError("Please enter a valid email for your confirmation.");
       return;
     }
-    if (channel === "DINE_IN" && !table.trim()) {
+    if (isDelivery) {
+      if (!addr) {
+        setError("Please enter your delivery address (street, city and ZIP).");
+        return;
+      }
+      if (underMin) {
+        setError(`Delivery starts at ${money(DELIVERY_MIN_CENTS)} in food.`);
+        return;
+      }
+      if (!deliveryQuote) {
+        setError("Waiting on the delivery price — give it a second.");
+        return;
+      }
+      if (phone.replace(/\D/g, "").length < 10) {
+        setError("Please enter a 10-digit phone number so the driver can reach you.");
+        return;
+      }
+    }
+    if (!isDelivery && channel === "DINE_IN" && !table.trim()) {
       setError("Please enter your table number.");
       return;
     }
@@ -135,8 +224,11 @@ export default function Checkout({
         body: JSON.stringify({
           sourceId: result.token,
           items: items.map((i) => ({ id: i.id, quantity: i.qty, picks: i.picks, note: i.note })),
-          channel,
-          table: channel === "DINE_IN" ? table.trim() : undefined,
+          channel: isDelivery ? "TAKE_OUT" : channel,
+          table: !isDelivery && channel === "DINE_IN" ? table.trim() : undefined,
+          ...(isDelivery && addr
+            ? { fulfillment: "DELIVERY", delivery: { ...addr, expectedFeeCents: deliveryQuote?.feeCents } }
+            : {}),
           name: name.trim(),
           phone: phone.trim(),
           email: email.trim(),
@@ -145,10 +237,21 @@ export default function Checkout({
           tipCents: tipCents > 0 ? tipCents : undefined,
         }),
       });
+      if (res.status === 409) setRequote((n) => n + 1); // delivery price moved: re-price, ask again
       if (!res.ok) throw new Error((await res.text()) || "Payment failed.");
+      const ok = (await res.json().catch(() => ({}))) as { trackingUrl?: string };
+      if (ok.trackingUrl) setTrackingUrl(ok.trackingUrl);
       setTipped(tipCents > 0);
       try {
-        localStorage.setItem("fto-customer", JSON.stringify({ name: name.trim(), phone: phone.trim(), email: email.trim() }));
+        localStorage.setItem(
+          "fto-customer",
+          JSON.stringify({
+            name: name.trim(),
+            phone: phone.trim(),
+            email: email.trim(),
+            ...(addr ? { address: { street: addr.street, unit: addr.unit, city: addr.city, zip: addr.zip, notes: addr.notes } } : {}),
+          })
+        );
       } catch {
         /* ignore */
       }
@@ -165,10 +268,27 @@ export default function Checkout({
     return (
       <div className="text-center py-8">
         <p className="text-2xl text-green-400 font-bold mb-2">Order placed! 🍖</p>
-        <p className="text-white/70">
-          We&apos;ll get it on the smoker — a confirmation is on its way to your email.
-          {tipped ? " And thanks for the tip, the crew appreciates it." : ""} See you soon!
-        </p>
+        {trackingUrl ? (
+          <>
+            <p className="text-white/70">
+              We&apos;re firing it up, and an Uber driver is booked to bring it to you. You&apos;ll get texts with
+              live tracking, and a confirmation is on its way to your email.
+            </p>
+            <a
+              href={trackingUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block mt-4 px-6 py-2 rounded-full border border-white/30 hover:border-brand-primary font-semibold"
+            >
+              Track your delivery →
+            </a>
+          </>
+        ) : (
+          <p className="text-white/70">
+            We&apos;ll get it on the smoker — a confirmation is on its way to your email.
+            {tipped ? " And thanks for the tip, the crew appreciates it." : ""} See you soon!
+          </p>
+        )}
         {onDone && (
           <button onClick={onDone} className="mt-6 px-6 py-2 rounded-full bg-brand-primary">
             Close
@@ -222,7 +342,9 @@ export default function Checkout({
             </span>
           </p>
         )}
-        <p className="text-white/70">⏱️ Most orders ready in ~15–20 min</p>
+        <p className="text-white/70">
+          {isDelivery ? "🚗 Delivered by Uber, with live tracking by text" : "⏱️ Most orders ready in ~15–20 min"}
+        </p>
         <p className="text-white/70">✉️ Email confirmation sent instantly</p>
       </div>
 
@@ -235,10 +357,10 @@ export default function Checkout({
                 Whole cuts are smoked to order — pick a time {leadDays} or more days out
               </span>
             ) : pickupOpts.asap ? (
-              <span className="text-white/70">Pickup time</span>
+              <span className="text-white/70">{isDelivery ? "Delivery time" : "Pickup time"}</span>
             ) : (
               <span className="text-brand-primary font-semibold">
-                We&apos;re closed right now — schedule a pickup time
+                We&apos;re closed right now — schedule a {isDelivery ? "delivery" : "pickup"} time
               </span>
             )}
           </label>
@@ -265,7 +387,9 @@ export default function Checkout({
               onChange={(e) => setPickup(e.target.value)}
               className="w-full p-3 rounded bg-black/40 border border-white/20 text-white focus:outline-none focus:border-brand-primary"
             >
-              {pickupDay === "Today" && pickupOpts.asap && <option value="asap">ASAP (~20 min)</option>}
+              {pickupDay === "Today" && pickupOpts.asap && (
+                <option value="asap">{isDelivery ? "ASAP (about 45–60 min)" : "ASAP (~20 min)"}</option>
+              )}
               {pickupOpts.slots
                 .filter((s) => s.day === pickupDay)
                 .map((s) => (
@@ -278,8 +402,76 @@ export default function Checkout({
         </div>
       )}
 
+      {/* Delivery address + the live Uber price */}
+      {isDelivery && (
+        <div className="mb-4 space-y-3">
+          {pickup !== "asap" && (
+            <p className="-mt-2 text-xs text-white/50">That&apos;s when it leaves our smoker; it reaches you about 15–30 minutes later.</p>
+          )}
+          <input
+            placeholder="Street address"
+            autoComplete="address-line1"
+            value={street}
+            onChange={(e) => setStreet(e.target.value)}
+            className="w-full p-2.5 text-base rounded bg-black/40 border border-white/20"
+          />
+          <div className="grid grid-cols-[1fr_7rem] gap-2">
+            <input
+              placeholder="Apt / suite (optional)"
+              autoComplete="address-line2"
+              value={unit}
+              onChange={(e) => setUnit(e.target.value)}
+              className="w-full p-2.5 text-base rounded bg-black/40 border border-white/20"
+            />
+            <input
+              placeholder="ZIP"
+              inputMode="numeric"
+              autoComplete="postal-code"
+              value={zip}
+              onChange={(e) => setZip(e.target.value.replace(/\D/g, "").slice(0, 5))}
+              className="w-full p-2.5 text-base rounded bg-black/40 border border-white/20"
+            />
+          </div>
+          <input
+            placeholder="City"
+            autoComplete="address-level2"
+            value={city}
+            onChange={(e) => setCity(e.target.value)}
+            className="w-full p-2.5 text-base rounded bg-black/40 border border-white/20"
+          />
+          <input
+            placeholder="Notes for the driver (gate code, which door…)"
+            value={dropNotes}
+            onChange={(e) => setDropNotes(e.target.value.slice(0, 200))}
+            className="w-full p-2.5 text-base rounded bg-black/40 border border-white/20"
+          />
+          <div className="rounded-xl bg-black/40 border border-white/10 p-3 text-sm" aria-live="polite">
+            {!addr ? (
+              <p className="text-white/60">Add your address to see the delivery price.</p>
+            ) : !zipOk ? (
+              <p className="text-brand-primary">We deliver to {DELIVERY_AREA_LABEL} for now. Pickup is always open!</p>
+            ) : liveQuote?.error ? (
+              <p className="text-brand-primary">{liveQuote.error}</p>
+            ) : deliveryQuote ? (
+              <p className="text-white">
+                <span className="text-green-400">●</span> Uber delivery <strong>{money(deliveryQuote.feeCents)}</strong>
+                {pickup === "asap" && <> · arrives around <strong>{etTime(deliveryQuote.dropoffEta)}</strong></>}
+              </p>
+            ) : (
+              <p className="text-white/60">Checking Uber&apos;s price…</p>
+            )}
+          </div>
+          {underMin && (
+            <p className="text-sm text-brand-primary">
+              Delivery starts at {money(DELIVERY_MIN_CENTS)} in food. Add {money(DELIVERY_MIN_CENTS - totalCents)} more, or
+              switch to pickup.
+            </p>
+          )}
+        </div>
+      )}
+
       {/* Dine-in vs Take-out */}
-      <div className="flex gap-3 mb-4">
+      <div className={isDelivery ? "hidden" : "flex gap-3 mb-4"}>
         {(["TAKE_OUT", "DINE_IN"] as const).map((c) => (
           <button
             key={c}
@@ -294,7 +486,7 @@ export default function Checkout({
         ))}
       </div>
 
-      {channel === "DINE_IN" && (
+      {!isDelivery && channel === "DINE_IN" && (
         <input
           placeholder="Table number"
           value={table}
@@ -309,7 +501,9 @@ export default function Checkout({
         className="w-full mb-3 p-2.5 text-base rounded bg-black/40 border border-white/20"
       />
       <input
-        placeholder="Phone"
+        placeholder={isDelivery ? "Phone (the driver texts you here)" : "Phone"}
+        type="tel"
+        autoComplete="tel"
         value={phone}
         onChange={(e) => setPhone(e.target.value)}
         className="w-full mb-3 p-2.5 text-base rounded bg-black/40 border border-white/20"
@@ -331,10 +525,10 @@ export default function Checkout({
       <button
         type="button"
         onClick={pay}
-        disabled={status === "paying" || items.length === 0}
+        disabled={status === "paying" || items.length === 0 || (isDelivery && (underMin || !deliveryQuote))}
         className="w-full py-3 rounded-full bg-brand-primary font-bold disabled:opacity-50"
       >
-        {status === "paying" ? "Processing…" : `Pay $${((totalCents + taxCents + tipCents) / 100).toFixed(2)}`}
+        {status === "paying" ? "Processing…" : `Pay ${money(totalCents + taxCents + tipCents + feesCents)}`}
       </button>
       <p className="mt-3 text-xs text-white/50 text-center leading-relaxed">
         🔒 Secure checkout by Square. Your card details go straight to Square and never touch our servers.

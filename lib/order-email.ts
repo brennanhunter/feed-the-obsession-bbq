@@ -1,6 +1,15 @@
 import { business } from "./business";
 
 export type OrderEmailLine = { title: string; qty: number; price: number; detail?: string };
+// Website delivery (Uber Direct): where it's going + the lines on top of the food.
+export type OrderEmailDelivery = {
+  address: string;
+  notes?: string;
+  trackingUrl?: string;
+  feeCents: number;
+  serviceFeeCents: number;
+  driverTipCents: number;
+};
 
 const money = (n: number) => `$${n.toFixed(2)}`;
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -23,13 +32,18 @@ export function orderConfirmationEmail(opts: {
   table?: string;
   pickup?: string; // "ASAP" or a scheduled-time label
   instructions?: string;
+  delivery?: OrderEmailDelivery;
 }): { subject: string; html: string } {
-  const { name, items, totalCents, channel, table, pickup, instructions } = opts;
+  const { name, items, totalCents, channel, table, pickup, instructions, delivery } = opts;
   const taxCents = opts.taxCents ?? 0;
   const tipCents = opts.tipCents ?? 0;
-  const foodCents = opts.subtotalCents ?? totalCents - taxCents - tipCents;
-  const fulfillment =
-    channel === "DINE_IN" ? `Dine-in${table ? ` · Table ${esc(table)}` : ""}` : "Take-out (pickup)";
+  const feesCents = delivery ? delivery.feeCents + delivery.serviceFeeCents + delivery.driverTipCents : 0;
+  const foodCents = opts.subtotalCents ?? totalCents - taxCents - tipCents - feesCents;
+  const fulfillment = delivery
+    ? "Delivery by Uber"
+    : channel === "DINE_IN"
+      ? `Dine-in${table ? ` · Table ${esc(table)}` : ""}`
+      : "Take-out (pickup)";
   const logo = `${business.url}/logo-red.png`;
 
   const rows = items
@@ -60,10 +74,12 @@ export function orderConfirmationEmail(opts: {
             <td style="padding:5px 0 0;font-family:Arial,Helvetica,sans-serif;color:#5b544a;font-size:14px;text-align:right">${money(cents / 100)}</td>
           </tr>`;
   const breakdown =
-    taxCents > 0 || tipCents > 0
+    taxCents > 0 || tipCents > 0 || delivery
       ? subRow("Food", foodCents) +
+        (delivery ? subRow("Delivery (Uber)", delivery.feeCents) + subRow("Service fee", delivery.serviceFeeCents) : "") +
         (taxCents > 0 ? subRow("Sales tax", taxCents) : "") +
-        (tipCents > 0 ? subRow("Tip", tipCents) : "")
+        (tipCents > 0 ? subRow("Tip", tipCents) : "") +
+        (delivery && delivery.driverTipCents > 0 ? subRow("Driver tip", delivery.driverTipCents) : "")
       : "";
 
   const html = `
@@ -89,7 +105,11 @@ export function orderConfirmationEmail(opts: {
         </h1>
         <p style="margin:0 0 22px;color:#5b544a;font-size:15px;line-height:1.5">
           We got your order and it&rsquo;s headed for the smoker.${
-            tipCents > 0 ? " And thank you for the tip &mdash; the crew appreciates it." : ""
+            delivery
+              ? " An Uber driver will bring it to your door &mdash; you&rsquo;ll get texts with live tracking."
+              : tipCents > 0
+                ? " And thank you for the tip &mdash; the crew appreciates it."
+                : ""
           } Here&rsquo;s what&rsquo;s on the ticket:
         </p>
 
@@ -110,19 +130,29 @@ export function orderConfirmationEmail(opts: {
         <div style="background:#ece4d3;border-left:4px solid ${RED};padding:14px 16px;margin:24px 0">
           <div style="color:#8a8069;font-size:11px;letter-spacing:1px;text-transform:uppercase;margin-bottom:3px">Fulfillment</div>
           <div style="color:${INK};font-size:16px;font-weight:bold">${fulfillment}</div>
-          <div style="color:${INK};font-size:15px;margin-top:6px"><strong>Pickup:</strong> ${esc(pickup || "ASAP")}</div>${
+          ${
+            delivery
+              ? `<div style="color:${INK};font-size:15px;margin-top:6px"><strong>Deliver to:</strong> ${esc(delivery.address)}</div>${
+                  delivery.notes ? `<div style="color:${INK};font-size:15px;margin-top:6px"><strong>For the driver:</strong> ${esc(delivery.notes)}</div>` : ""
+                }<div style="color:${INK};font-size:15px;margin-top:6px"><strong>When:</strong> ${esc(pickup === "ASAP" || !pickup ? "As soon as it's ready" : `Leaves our smoker ${pickup}`)}</div>`
+              : `<div style="color:${INK};font-size:15px;margin-top:6px"><strong>Pickup:</strong> ${esc(pickup || "ASAP")}</div>`
+          }${
             instructions
               ? `<div style="color:${INK};font-size:15px;margin-top:6px"><strong>Your note:</strong> ${esc(instructions)}</div>`
               : ""
           }
         </div>
 
-        <p style="margin:0 0 4px;color:${INK};font-size:15px;line-height:1.6"><strong>Pickup:</strong> ${esc(business.address.full)}</p>
+        ${delivery ? "" : `<p style="margin:0 0 4px;color:${INK};font-size:15px;line-height:1.6"><strong>Pickup:</strong> ${esc(business.address.full)}</p>`}
         <p style="margin:0 0 4px;color:${INK};font-size:15px;line-height:1.6"><strong>Hours:</strong> ${business.hoursDisplay}</p>
         <p style="margin:0 0 22px;color:${INK};font-size:15px;line-height:1.6"><strong>Questions?</strong> Call <a href="${business.phoneHref}" style="color:${RED};text-decoration:none;font-weight:bold">${business.phone}</a></p>
 
         <div style="text-align:center">
-          <a href="${business.maps.directions}" style="display:inline-block;background:${RED};color:#fff;text-decoration:none;font-family:${HEAVY};font-size:14px;letter-spacing:1px;padding:13px 30px;border-radius:999px">GET DIRECTIONS</a>
+          ${
+            delivery?.trackingUrl
+              ? `<a href="${esc(delivery.trackingUrl)}" style="display:inline-block;background:${RED};color:#fff;text-decoration:none;font-family:${HEAVY};font-size:14px;letter-spacing:1px;padding:13px 30px;border-radius:999px">TRACK YOUR DELIVERY</a>`
+              : `<a href="${business.maps.directions}" style="display:inline-block;background:${RED};color:#fff;text-decoration:none;font-family:${HEAVY};font-size:14px;letter-spacing:1px;padding:13px 30px;border-radius:999px">GET DIRECTIONS</a>`
+          }
         </div>
 
         <!-- Review ask. Neutral wording on purpose: Google's review policy bans

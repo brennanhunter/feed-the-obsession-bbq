@@ -1,20 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { FLAT_TIPS_UNDER_CENTS, MAX_TIP_CENTS, NO_TIP, TIP_FLATS_CENTS, TIP_PCTS, type TipChoice } from "@/lib/tips";
 
 const money = (cents: number) => `$${(cents / 100).toFixed(2)}`;
 
 // "No tip / 10% / 15% / 20% / Other" pills (percentages of the food total), or
-// "No tip / $1 / $2 / $3 / Other" on small orders.
+// "No tip / $1 / $2 / $3 / Other" on small orders. Delivery passes its own
+// label and dollar buttons (the driver tip).
 export default function TipPicker({
   subtotalCents,
   value,
   onChange,
+  label,
+  flats,
 }: {
   subtotalCents: number;
   value: TipChoice;
   onChange: (choice: TipChoice) => void;
+  label?: ReactNode;
+  flats?: readonly number[];
 }) {
   // The custom box keeps its own text so "5." or an empty field doesn't fight the parser.
   const [customOpen, setCustomOpen] = useState(value.kind === "custom");
@@ -35,7 +40,11 @@ export default function TipPicker({
   return (
     <div>
       <p className="text-sm text-white/70">
-        Add a tip for the pit crew? <span className="text-white/40">Totally optional.</span>
+        {label ?? (
+          <>
+            Add a tip for the pit crew? <span className="text-white/40">Totally optional.</span>
+          </>
+        )}
       </p>
       <div className="mt-2 grid grid-cols-5 gap-2">
         <button
@@ -48,8 +57,8 @@ export default function TipPicker({
         >
           No tip
         </button>
-        {subtotalCents < FLAT_TIPS_UNDER_CENTS
-          ? TIP_FLATS_CENTS.map((cents) => (
+        {flats || subtotalCents < FLAT_TIPS_UNDER_CENTS
+          ? (flats ?? TIP_FLATS_CENTS).map((cents) => (
               <button
                 key={cents}
                 type="button"

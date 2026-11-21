@@ -3,11 +3,26 @@ import { square, LOCATION_ID } from "@/lib/square";
 import { checkPicks, describePicks, getMenuMap, picksPrice, type ChoicePick } from "@/lib/catalog";
 import { isSpecialAvailable, specialLabel } from "@/lib/specials";
 import { sendEmail } from "@/lib/mailer";
-import { orderConfirmationEmail, type OrderEmailLine } from "@/lib/order-email";
+import { orderConfirmationEmail, type OrderEmailLine, type OrderEmailDelivery } from "@/lib/order-email";
 import { orderNotifyEmail } from "@/lib/order-notify";
 import { etDaysAhead, formatPickupLabel } from "@/lib/hours";
 import { business } from "@/lib/business";
 import { MAX_TIP_CENTS } from "@/lib/tips";
+import {
+  addressLine,
+  cleanAddress,
+  deliveryAllowedOnServer,
+  DELIVERY_MIN_CENTS,
+  DELIVERY_AREA_LABEL,
+  e164,
+  MAX_DELIVERY_FEE_CENTS,
+  PREP_MINUTES,
+  SCHEDULED_PICKUP_WINDOW_MINUTES,
+  serviceFeeCents,
+  type DeliveryAddress,
+  zipDeliverable,
+} from "@/lib/delivery";
+import { createDelivery, pickupTimes, quoteDelivery, uberConfigured } from "@/lib/uber";
 
 // Browser sends only Square catalog ids + quantities. The server validates each
 // id against the live McSorleys menu and lets Square price the order from the
@@ -21,12 +36,15 @@ type Body = {
   name: string;
   phone: string;
   email: string;
-  pickupAt?: string; // ISO; when set, this is a SCHEDULED pickup
+  pickupAt?: string; // ISO; when set, this is a SCHEDULED pickup (or scheduled delivery)
   instructions?: string; // free-text note for the kitchen
-  tipCents?: number; // optional tip, integer cents, charged on top of the order
+  tipCents?: number; // pickup: tip for the crew (Square tip). Delivery: tip for the driver (passed to Uber).
+  fulfillment?: "PICKUP" | "DELIVERY";
+  delivery?: Partial<DeliveryAddress> & { expectedFeeCents?: number };
 };
 
 const emailOk = (e: string) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e);
+const usd = (cents: number) => ({ amount: BigInt(cents), currency: "USD" as const });
 
 export async function POST(req: Request) {
   let body: Body;
@@ -45,13 +63,31 @@ export async function POST(req: Request) {
     return new Response("A valid email is required for your confirmation", { status: 400 });
 
   const email = body.email.trim();
+  const name = body.name.trim();
   const instructions = String(body.instructions ?? "").trim().slice(0, 300) || undefined;
+  const isDelivery = body.fulfillment === "DELIVERY";
 
-  // Optional tip. Square takes it as tip_money on the payment, separate from the
-  // order total (which must still equal what Square priced the food at).
+  // Optional tip. Pickup: Square takes it as tip_money on the payment (for the
+  // crew). Delivery: it's the driver's — a line on the order, handed to Uber.
   const tipCents = body.tipCents == null ? 0 : Number(body.tipCents);
   if (!Number.isInteger(tipCents) || tipCents < 0 || tipCents > MAX_TIP_CENTS) {
     return new Response(`Tip must be between $0 and $${MAX_TIP_CENTS / 100}`, { status: 400 });
+  }
+
+  // Delivery basics before touching the menu or Square.
+  let dropoff: DeliveryAddress | null = null;
+  let dropoffPhone: string | null = null;
+  if (isDelivery) {
+    if (!deliveryAllowedOnServer() || !uberConfigured()) {
+      return new Response("Delivery isn't available yet — please choose pickup", { status: 400 });
+    }
+    dropoff = cleanAddress(body.delivery);
+    if (!dropoff) return new Response("Please enter your delivery address (street, city and 5-digit ZIP)", { status: 400 });
+    if (!zipDeliverable(dropoff.zip)) {
+      return new Response(`We deliver to ${DELIVERY_AREA_LABEL} for now — please choose pickup`, { status: 400 });
+    }
+    dropoffPhone = e164(body.phone);
+    if (!dropoffPhone) return new Response("Please enter a 10-digit phone number so the driver can reach you", { status: 400 });
   }
 
   // Scheduled pickup (required when ordering outside hours; optional otherwise).
@@ -128,27 +164,79 @@ export async function POST(req: Request) {
       ...(detail ? { detail } : {}),
     });
   }
+  // Food subtotal from the same catalog prices Square uses (pre-tax).
+  const foodCentsCalc = emailLines.reduce((s, l) => s + Math.round(l.price * 100) * l.qty, 0);
 
-  const channelNote =
-    body.channel === "DINE_IN"
+  // Delivery: minimum, fresh Uber price, and the fee lines on the order.
+  let deliveryFee = 0;
+  let serviceFee = 0;
+  let uberQuoteId = "";
+  let uberTimes: ReturnType<typeof pickupTimes> | null = null;
+  if (isDelivery && dropoff && dropoffPhone) {
+    if (foodCentsCalc < DELIVERY_MIN_CENTS) {
+      return new Response(`Delivery starts at $${DELIVERY_MIN_CENTS / 100} in food — add a little more, or choose pickup`, {
+        status: 400,
+      });
+    }
+    const scheduled = Boolean(pickupAt) && new Date(pickupAt!).getTime() > Date.now() + 30 * 60_000;
+    const readyAt = scheduled ? new Date(pickupAt!) : new Date(Date.now() + PREP_MINUTES * 60_000);
+    uberTimes = pickupTimes(readyAt, scheduled, SCHEDULED_PICKUP_WINDOW_MINUTES);
+    const q = await quoteDelivery({ dropoff, dropoffPhone, valueCents: foodCentsCalc, times: uberTimes });
+    if (!q.ok) {
+      console.warn("[checkout] Uber quote refused:", q.message);
+      return new Response("Sorry, we can't deliver to that address right now — please choose pickup", { status: 422 });
+    }
+    if (q.quote.feeCents > MAX_DELIVERY_FEE_CENTS) {
+      return new Response("That address is a little far for us to deliver hot BBQ — please choose pickup", { status: 422 });
+    }
+    // The price the customer saw may be a few minutes old; don't surprise them.
+    const expected = Number(body.delivery?.expectedFeeCents);
+    if (Number.isFinite(expected) && q.quote.feeCents > expected + 50) {
+      return new Response(
+        `The delivery price just changed to $${(q.quote.feeCents / 100).toFixed(2)}. Please check the new total and tap Pay again.`,
+        { status: 409 }
+      );
+    }
+    deliveryFee = q.quote.feeCents;
+    serviceFee = serviceFeeCents(foodCentsCalc);
+    uberQuoteId = q.quote.id;
+  }
+
+  const channelNote = isDelivery
+    ? "UBER DELIVERY · hand to the Uber driver"
+    : body.channel === "DINE_IN"
       ? `DINE-IN · Table ${body.table?.trim() || "?"}`
       : "TAKE-OUT";
-  const note = `${channelNote} · Pickup: ${pickupLabel}${instructions ? ` · Note: ${instructions}` : ""}`.slice(0, 500);
+  const whenNote = isDelivery ? `Driver pickup: ${pickupLabel === "ASAP" ? `~${PREP_MINUTES} min` : pickupLabel}` : `Pickup: ${pickupLabel}`;
+  const note = `${channelNote} · ${whenNote}${instructions ? ` · Note: ${instructions}` : ""}`.slice(0, 500);
 
   try {
     // 1) Create the order with a PICKUP fulfillment (how it reaches the kitchen).
+    //    Delivery orders are pickups too — by the Uber driver — so the register
+    //    and printer handle them exactly like every other online order.
     const orderRes = await square.orders.create({
       idempotencyKey: randomUUID(),
       order: {
         locationId: LOCATION_ID,
         lineItems,
+        ...(isDelivery
+          ? {
+              serviceCharges: [
+                { name: "Delivery (Uber)", amountMoney: usd(deliveryFee), calculationPhase: "TOTAL_PHASE" as const, taxable: false },
+                { name: "Service fee (10%)", amountMoney: usd(serviceFee), calculationPhase: "TOTAL_PHASE" as const, taxable: false },
+                ...(tipCents > 0
+                  ? [{ name: "Driver tip (100% to driver)", amountMoney: usd(tipCents), calculationPhase: "TOTAL_PHASE" as const, taxable: false }]
+                  : []),
+              ],
+            }
+          : {}),
         fulfillments: [
           {
             type: "PICKUP",
             state: "PROPOSED",
             pickupDetails: {
               recipient: {
-                displayName: body.name.trim(),
+                displayName: isDelivery ? `UBER: ${name}` : name,
                 phoneNumber: body.phone.trim(),
                 emailAddress: email,
               },
@@ -162,46 +250,128 @@ export async function POST(req: Request) {
         // Square) the same way the POS does; the API skips it unless asked.
         pricingOptions: { autoApplyTaxes: true },
         metadata: {
-          channel: body.channel,
-          ...(body.table?.trim() ? { table: body.table.trim() } : {}),
+          channel: isDelivery ? "DELIVERY" : body.channel,
+          ...(body.table?.trim() && !isDelivery ? { table: body.table.trim() } : {}),
+          ...(isDelivery && dropoff ? { deliver_to: addressLine(dropoff).slice(0, 255) } : {}),
         },
       },
     });
 
     const order = orderRes.order;
     const orderId = order?.id;
-    const amount = order?.totalMoney?.amount; // BigInt, server-computed by Square
+    const amount = order?.totalMoney?.amount; // BigInt, server-computed by Square (includes delivery lines)
     if (!orderId || amount == null) {
       return new Response("Could not create the order", { status: 502 });
     }
-    const foodCents = Number(amount);
+    const orderTotal = Number(amount);
     const taxCents = Number(order?.totalTaxMoney?.amount ?? 0); // Florida sales tax, applied by Square
-    const chargedCents = foodCents + tipCents;
+    const serviceChargeCents = Number(order?.totalServiceChargeMoney?.amount ?? 0);
+    const foodCents = orderTotal - taxCents - serviceChargeCents; // food only
+    const squareTip = isDelivery ? 0 : tipCents;
+    const chargedCents = orderTotal + squareTip;
 
-    // 2) Charge the card for Square's computed total (plus any tip) and apply it to the order.
-    await square.payments.create({
+    // 2) Charge the card for Square's computed total (plus any crew tip) and apply it to the order.
+    const payRes = await square.payments.create({
       idempotencyKey: randomUUID(),
       sourceId: body.sourceId,
       orderId,
       locationId: LOCATION_ID,
       amountMoney: { amount, currency: "USD" },
-      ...(tipCents > 0 ? { tipMoney: { amount: BigInt(tipCents), currency: "USD" } } : {}),
+      ...(squareTip > 0 ? { tipMoney: usd(squareTip) } : {}),
       buyerEmailAddress: email, // Square records it (and can send its own receipt)
       autocomplete: true,
     });
 
-    // 3) Send our branded confirmation. Never fail the order if the email hiccups.
+    // 3) Delivery: book the Uber driver now that the card went through.
+    let delivery: OrderEmailDelivery | undefined;
+    if (isDelivery && dropoff && dropoffPhone && uberTimes) {
+      const shortRef = `#${orderId.slice(-5).toUpperCase()}`;
+      const booked = await createDelivery({
+        quoteId: uberQuoteId,
+        orderId,
+        shortRef,
+        customerName: name,
+        dropoff,
+        dropoffPhone,
+        items: emailLines.map((l) => ({ name: l.title, quantity: l.qty, priceCents: Math.round(l.price * 100) })),
+        valueCents: foodCents,
+        tipCents,
+        times: uberTimes,
+      }).catch((e: unknown) => ({ ok: false as const, message: e instanceof Error ? e.message : String(e) }));
+
+      if (!booked.ok) {
+        // No driver = no delivery. Give the money back and warn the kitchen
+        // before anyone starts cooking.
+        console.error("[checkout] Uber booking failed after payment:", booked.message);
+        const paymentId = payRes.payment?.id;
+        let refunded = false;
+        if (paymentId) {
+          try {
+            await square.refunds.refundPayment({
+              idempotencyKey: randomUUID(),
+              paymentId,
+              amountMoney: { amount, currency: "USD" },
+              reason: "Delivery driver could not be booked",
+            });
+            refunded = true;
+          } catch (e) {
+            console.error("[checkout] refund after failed delivery booking failed", e);
+          }
+        }
+        // Mark the ticket canceled so the register/order manager shows it's not one to cook.
+        try {
+          const latest = (await square.orders.get({ orderId })).order;
+          const uid = latest?.fulfillments?.[0]?.uid;
+          if (latest?.version != null && uid) {
+            await square.orders.update({
+              orderId,
+              idempotencyKey: randomUUID(),
+              order: { locationId: LOCATION_ID, version: latest.version, fulfillments: [{ uid, state: "CANCELED" }] },
+            });
+          }
+        } catch (e) {
+          console.error("[checkout] couldn't cancel the ticket after failed delivery booking", e);
+        }
+        const alertTo = (process.env.ORDER_NOTIFY_TO ?? "hunter@xtremery.com").split(",").map((s) => s.trim()).filter(Boolean);
+        await sendEmail({
+          to: alertTo,
+          subject: `⚠️ DON'T COOK — delivery for ${name} couldn't be booked${refunded ? " (refunded)" : " (REFUND FAILED)"}`,
+          html: `<p>Order ${orderId} (${shortRef}) was paid, but Uber wouldn't book a driver: ${booked.message}</p><p>${
+            refunded ? "The customer was refunded automatically." : "<strong>The automatic refund failed — refund it in Square.</strong>"
+          } Customer: ${name}, ${body.phone.trim()}, ${email}. Address: ${addressLine(dropoff)}.</p>`,
+          replyTo: email,
+        });
+        return new Response(
+          refunded
+            ? "We couldn't book a delivery driver just now, so we refunded your card. Please try pickup, or call us."
+            : `We couldn't book a delivery driver. Please call us at ${business.phone} and we'll make it right.`,
+          { status: 502 }
+        );
+      }
+
+      delivery = {
+        address: addressLine(dropoff),
+        notes: dropoff.notes,
+        trackingUrl: booked.delivery.trackingUrl,
+        feeCents: deliveryFee,
+        serviceFeeCents: serviceFee,
+        driverTipCents: tipCents,
+      };
+    }
+
+    // 4) Send our branded confirmation. Never fail the order if the email hiccups.
     const { subject, html } = orderConfirmationEmail({
-      name: body.name.trim(),
+      name,
       items: emailLines,
       totalCents: chargedCents,
-      subtotalCents: foodCents - taxCents,
+      subtotalCents: foodCents,
       taxCents,
-      tipCents,
+      tipCents: squareTip,
       channel: body.channel,
       table: body.table?.trim(),
       pickup: pickupLabel,
       instructions,
+      delivery,
     });
     await sendEmail({ to: email, subject, html, replyTo: business.email });
 
@@ -212,22 +382,23 @@ export async function POST(req: Request) {
       .filter(Boolean);
     const notify = orderNotifyEmail({
       orderId,
-      name: body.name.trim(),
+      name,
       email,
       phone: body.phone.trim(),
       items: emailLines,
       totalCents: chargedCents,
-      subtotalCents: foodCents - taxCents,
+      subtotalCents: foodCents,
       taxCents,
-      tipCents,
+      tipCents: squareTip,
       channel: body.channel,
       table: body.table?.trim(),
       pickup: pickupLabel,
       instructions,
+      delivery,
     });
     await sendEmail({ to: notifyTo, subject: notify.subject, html: notify.html, replyTo: email });
 
-    return Response.json({ ok: true, orderId });
+    return Response.json({ ok: true, orderId, ...(delivery ? { trackingUrl: delivery.trackingUrl } : {}) });
   } catch (err: unknown) {
     const e = err as { errors?: { detail?: string }[]; message?: string };
     const detail = e?.errors?.[0]?.detail || e?.message || "Payment failed";

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useCart } from "./CartContext";
-import Checkout from "./Checkout";
+import Checkout, { type DeliveryQuote } from "./Checkout";
 import TipPicker from "./TipPicker";
 import { NO_TIP, tipCentsFor, type TipChoice } from "@/lib/tips";
 import { ItemRow, ItemSheet } from "../MenuWrapper";
@@ -11,8 +11,25 @@ import { useQuote } from "./useQuote";
 import { business } from "@/lib/business";
 import { getOpenStatus } from "@/lib/hours";
 import type { MenuItem } from "@/lib/catalog";
+import { DELIVERY_AREA_LABEL, DELIVERY_FLAG, DELIVERY_MIN_CENTS, DRIVER_TIP_FLATS_CENTS, serviceFeeCents } from "@/lib/delivery";
 
 const money = (cents: number) => `$${(cents / 100).toFixed(2)}`;
+
+// Delivery shows for everyone when NEXT_PUBLIC_DELIVERY=on. With "preview",
+// only on browsers that opened /order?delivery=preview once (?delivery=off undoes it).
+// Called during render only after hydration (client-only, so no mismatch).
+function deliveryVisible(): boolean {
+  if (DELIVERY_FLAG === "on") return true;
+  if (DELIVERY_FLAG !== "preview") return false;
+  const p = new URLSearchParams(window.location.search).get("delivery");
+  try {
+    if (p === "preview") localStorage.setItem("fto-delivery-preview", "1");
+    if (p === "off") localStorage.removeItem("fto-delivery-preview");
+    return localStorage.getItem("fto-delivery-preview") === "1";
+  } catch {
+    return p === "preview";
+  }
+}
 
 function PickupCard() {
   const [status, setStatus] = useState<{ open: boolean; label: string } | null>(null);
@@ -52,14 +69,26 @@ export default function OrderPage({ extras, menu }: { extras: MenuItem[]; menu: 
   const editLine = editing ? items.find((i) => i.key === editing) : undefined;
   const editItem = editLine ? byId.get(editLine.id) : undefined;
   const [instructions, setInstructions] = useState("");
-  // Optional tip, charged on top of the food (Square tip_money).
+  // Optional tip, charged on top of the food: the crew's on pickup, the driver's on delivery.
   const [tip, setTip] = useState<TipChoice>(NO_TIP);
   const tipCents = tipCentsFor(tip, totalCents); // tip on the food, before tax
-  const chargeCents = totalCents + taxCents + tipCents;
   const [done, setDone] = useState(false);
   // Avoid a flash of "empty" before the saved cart loads from localStorage.
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => setHydrated(true), []);
+  // Pickup or delivery (Uber). Delivery adds Uber's fee + the 10% service fee.
+  const [mode, setMode] = useState<"PICKUP" | "DELIVERY">("PICKUP");
+  const canDeliver = hydrated && deliveryVisible();
+  const isDelivery = canDeliver && mode === "DELIVERY";
+  const [deliveryQuote, setDeliveryQuote] = useState<DeliveryQuote | null>(null);
+  const deliveryFee = isDelivery ? deliveryQuote?.feeCents ?? 0 : 0;
+  const serviceFee = isDelivery ? serviceFeeCents(totalCents) : 0;
+  const chargeCents = totalCents + taxCents + tipCents + deliveryFee + serviceFee;
+  const pickMode = (m: "PICKUP" | "DELIVERY") => {
+    if (m === mode) return;
+    setMode(m);
+    setTip(NO_TIP); // a crew tip and a driver tip aren't the same thing
+  };
   // Hide the phone summary bar once the payment section is on screen.
   const [payVisible, setPayVisible] = useState(false);
   useEffect(() => {
@@ -178,35 +207,96 @@ export default function OrderPage({ extras, menu }: { extras: MenuItem[]; menu: 
             </section>
           )}
 
-          <div className="lg:hidden">
-            <PickupCard />
-          </div>
+          {!isDelivery && (
+            <div className="lg:hidden">
+              <PickupCard />
+            </div>
+          )}
         </div>
 
         {/* Right: pickup + pay (sticky on desktop) */}
         <aside className="space-y-6 lg:sticky lg:top-28">
-          <div className="hidden lg:block">
-            <PickupCard />
-          </div>
+          {!isDelivery && (
+            <div className="hidden lg:block">
+              <PickupCard />
+            </div>
+          )}
           <section id="payment" aria-labelledby="pay-h" className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 scroll-mt-28">
             {!done && (
               <>
-                <h2 id="pay-h" className="font-display text-xl tracking-wider uppercase">2. Pickup &amp; payment</h2>
+                <h2 id="pay-h" className="font-display text-xl tracking-wider uppercase">
+                  2. {isDelivery ? "Delivery" : "Pickup"} &amp; payment
+                </h2>
+                {canDeliver && (
+                  <div className="mt-4">
+                    <div
+                      role="radiogroup"
+                      aria-label="Pickup or delivery"
+                      className="grid grid-cols-2 gap-1 p-1 rounded-full bg-black/40 border border-white/10"
+                    >
+                      {(["PICKUP", "DELIVERY"] as const).map((m) => (
+                        <button
+                          key={m}
+                          type="button"
+                          role="radio"
+                          aria-checked={mode === m}
+                          onClick={() => pickMode(m)}
+                          className={`py-2.5 rounded-full text-sm font-bold uppercase tracking-wider transition-all ${
+                            mode === m ? "bg-brand-primary text-white" : "text-white/60 hover:text-white"
+                          }`}
+                        >
+                          {m === "PICKUP" ? "Pickup" : "Delivery"}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="mt-2 text-xs text-white/50 text-center">
+                      {isDelivery
+                        ? `Delivered by Uber · ${money(DELIVERY_MIN_CENTS)} minimum · ${DELIVERY_AREA_LABEL}`
+                        : "Pick it up at the window, no extra fees"}
+                    </p>
+                  </div>
+                )}
                 <div className="mt-4">
-                  <TipPicker subtotalCents={totalCents} value={tip} onChange={setTip} />
+                  <TipPicker
+                    subtotalCents={totalCents}
+                    value={tip}
+                    onChange={setTip}
+                    {...(isDelivery
+                      ? {
+                          label: (
+                            <>
+                              Tip your driver? <span className="text-white/40">100% goes to them.</span>
+                            </>
+                          ),
+                          flats: DRIVER_TIP_FLATS_CENTS,
+                        }
+                      : {})}
+                  />
                 </div>
                 <dl className="mt-4 mb-5 border-b border-white/10 pb-4 space-y-1">
                   <div className="flex justify-between text-sm text-white/70">
                     <dt>Food</dt>
                     <dd>{money(totalCents)}</dd>
                   </div>
+                  {isDelivery && (
+                    <>
+                      <div className="flex justify-between text-sm text-white/70">
+                        <dt>Delivery (Uber)</dt>
+                        <dd>{deliveryQuote ? money(deliveryQuote.feeCents) : <span className="text-white/40">add address</span>}</dd>
+                      </div>
+                      <div className="flex justify-between text-sm text-white/70">
+                        <dt>Service fee (10%)</dt>
+                        <dd>{money(serviceFee)}</dd>
+                      </div>
+                    </>
+                  )}
                   <div className="flex justify-between text-sm text-white/70">
                     <dt>Sales tax (6%)</dt>
                     <dd>{money(taxCents)}</dd>
                   </div>
                   {tipCents > 0 && (
                     <div className="flex justify-between text-sm text-white/70">
-                      <dt>Tip</dt>
+                      <dt>{isDelivery ? "Driver tip" : "Tip"}</dt>
                       <dd>{money(tipCents)}</dd>
                     </div>
                   )}
@@ -217,7 +307,15 @@ export default function OrderPage({ extras, menu }: { extras: MenuItem[]; menu: 
                 </dl>
               </>
             )}
-            <Checkout instructions={instructions} tipCents={tipCents} taxCents={taxCents} onDone={() => setDone(true)} />
+            <Checkout
+              instructions={instructions}
+              tipCents={tipCents}
+              taxCents={taxCents}
+              mode={isDelivery ? "DELIVERY" : "PICKUP"}
+              feesCents={deliveryFee + serviceFee}
+              onDeliveryQuote={setDeliveryQuote}
+              onDone={() => setDone(true)}
+            />
           </section>
         </aside>
       </div>
