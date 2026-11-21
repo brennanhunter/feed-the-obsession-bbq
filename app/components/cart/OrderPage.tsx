@@ -11,25 +11,10 @@ import { useQuote } from "./useQuote";
 import { business } from "@/lib/business";
 import { getOpenStatus } from "@/lib/hours";
 import type { MenuItem } from "@/lib/catalog";
-import { DELIVERY_AREA_LABEL, DELIVERY_FLAG, DELIVERY_MIN_CENTS, DRIVER_TIP_FLATS_CENTS, serviceFeeCents } from "@/lib/delivery";
+import { DELIVERY_AREA_LABEL, DELIVERY_MIN_CENTS, DRIVER_TIP_FLATS_CENTS, serviceFeeCents } from "@/lib/delivery";
+import { deliveryVisible, readOrderMode, saveOrderMode, type OrderMode } from "./orderMode";
 
 const money = (cents: number) => `$${(cents / 100).toFixed(2)}`;
-
-// Delivery shows for everyone when NEXT_PUBLIC_DELIVERY=on. With "preview",
-// only on browsers that opened /order?delivery=preview once (?delivery=off undoes it).
-// Called during render only after hydration (client-only, so no mismatch).
-function deliveryVisible(): boolean {
-  if (DELIVERY_FLAG === "on") return true;
-  if (DELIVERY_FLAG !== "preview") return false;
-  const p = new URLSearchParams(window.location.search).get("delivery");
-  try {
-    if (p === "preview") localStorage.setItem("fto-delivery-preview", "1");
-    if (p === "off") localStorage.removeItem("fto-delivery-preview");
-    return localStorage.getItem("fto-delivery-preview") === "1";
-  } catch {
-    return p === "preview";
-  }
-}
 
 function PickupCard() {
   const [status, setStatus] = useState<{ open: boolean; label: string } | null>(null);
@@ -163,16 +148,19 @@ export default function OrderPage({ extras, menu }: { extras: MenuItem[]; menu: 
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => setHydrated(true), []);
   // Pickup or delivery (Uber). Delivery adds Uber's fee + the 10% service fee.
-  const [mode, setMode] = useState<"PICKUP" | "DELIVERY">("PICKUP");
+  // Starts on whatever the customer picked on the menu. (Read lazily: the page
+  // renders a blank shell until hydrated, so the server's "PICKUP" never shows.)
+  const [mode, setMode] = useState<OrderMode>(readOrderMode);
   const canDeliver = hydrated && deliveryVisible();
   const isDelivery = canDeliver && mode === "DELIVERY";
   const [deliveryQuote, setDeliveryQuote] = useState<DeliveryQuote | null>(null);
   const deliveryFee = isDelivery ? deliveryQuote?.feeCents ?? 0 : 0;
   const serviceFee = isDelivery ? serviceFeeCents(totalCents) : 0;
   const chargeCents = totalCents + taxCents + tipCents + deliveryFee + serviceFee;
-  const pickMode = (m: "PICKUP" | "DELIVERY") => {
+  const pickMode = (m: OrderMode) => {
     if (m === mode) return;
     setMode(m);
+    saveOrderMode(m);
     setTip(NO_TIP); // a crew tip and a driver tip aren't the same thing
   };
   // Hide the phone summary bar once the payment section is on screen.

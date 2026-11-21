@@ -18,6 +18,7 @@ import { business } from "@/lib/business";
 import { useCart, type CartInput } from "./cart/CartContext";
 import { announceAdded } from "./cart/AddedToast";
 import CateringForm from "./CateringForm";
+import OrderModePicker from "./OrderModePicker";
 
 // Branded-menu section labels (mirrors the printed menu).
 const SECTION_LABEL: Record<MenuSection, string> = {
@@ -412,6 +413,7 @@ export default function MenuWrapper({ items }: { items: MenuItem[] }) {
         <p className="mt-4 text-white/60 max-w-xl">
           Our menu varies week to week based on what we&apos;re smoking. Follow us for weekly updates.
         </p>
+        <OrderModePicker />
       </motion.div>
 
       <div className="space-y-14">
