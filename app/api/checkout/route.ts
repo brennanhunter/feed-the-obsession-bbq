@@ -332,7 +332,11 @@ export async function POST(req: Request) {
         } catch (e) {
           console.error("[checkout] couldn't cancel the ticket after failed delivery booking", e);
         }
-        const alertTo = (process.env.ORDER_NOTIFY_TO ?? "hunter@xtremery.com").split(",").map((s) => s.trim()).filter(Boolean);
+        // Who must hear "don't cook" right away: Xtremery + the owner (ORDER_ALERT_TO).
+        const alertTo = (process.env.ORDER_ALERT_TO ?? process.env.ORDER_NOTIFY_TO ?? "hunter@xtremery.com")
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean);
         await sendEmail({
           to: alertTo,
           subject: `⚠️ DON'T COOK — delivery for ${name} couldn't be booked${refunded ? " (refunded)" : " (REFUND FAILED)"}`,
