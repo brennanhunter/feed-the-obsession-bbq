@@ -416,7 +416,11 @@ export default function MenuWrapper({ items }: { items: MenuItem[] }) {
 
       <div className="space-y-14">
         {sections.map((section) => (
-          <section key={section}>
+          <section
+            key={section}
+            id={section === "Daily Specials" ? "specials" : undefined}
+            className="scroll-mt-28"
+          >
             <h3 className="font-display text-3xl tracking-wider text-white border-b-2 border-brand-primary pb-2 mb-1 uppercase">
               {SECTION_LABEL[section]}
             </h3>

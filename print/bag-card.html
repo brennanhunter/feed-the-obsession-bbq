@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Feed The Obsession BBQ — Bag Card</title>
+<!-- Thank-you card for to-go and delivery bags: four 4.25x5.5 cards on a letter
+     sheet, cut on the marks. A thank-you from the crew + the weekly specials;
+     QR goes to the menu's Smoke Schedule (utm_source=bag_card so scans can be
+     counted). No prices, so it stays right when prices change.
+     Build: node print/build.mjs bag-card -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Barlow+Condensed:wght@400;600;700&display=swap" rel="stylesheet" />
+<style>
+  @page { size: letter; margin: 0; }
+  :root { --red: #c1282d; --ink: #201a16; --muted: #6f6458; --cream: #f5efe1; --black: #0d0d0d; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #fff; }
+  body { width: 816px; height: 1056px; overflow: hidden; font-family: "Barlow Condensed", sans-serif; color: var(--ink); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  /* 2x2 grid of 4.25x5.5in cards (408x528px), full bleed to the sheet edge;
+     cut once down the middle and once across. */
+  .sheet { width: 816px; height: 1056px; display: grid; grid-template-columns: 408px 408px; grid-template-rows: 528px 528px; position: relative; }
+  .sheet::before, .sheet::after { content: ""; position: absolute; background: #bbb; }
+  .sheet::before { left: 407.5px; top: 0; bottom: 0; width: 1px; }
+  .sheet::after { top: 527.5px; left: 0; right: 0; height: 1px; }
+  .card { background: var(--cream); display: flex; flex-direction: column; overflow: hidden; padding: 14px; }
+  .inner { flex: 1; display: flex; flex-direction: column; overflow: hidden; border-radius: 6px; background: var(--cream); }
+
+  header { background: var(--black); color: #fff; text-align: center; padding: 9px 0 7px; border-radius: 6px 6px 0 0; }
+  header img { width: 42px; display: block; margin: 0 auto; }
+  h1 { font-family: "Alfa Slab One", serif; font-weight: 400; font-size: 16px; letter-spacing: .6px; margin: 4px 0 0; line-height: 1; }
+  h1 .the { color: var(--red); }
+  .zz { height: 7px; background: var(--red); clip-path: polygon(0 0, 100% 0, 100% 40%, 97.5% 100%, 95% 40%, 92.5% 100%, 90% 40%, 87.5% 100%, 85% 40%, 82.5% 100%, 80% 40%, 77.5% 100%, 75% 40%, 72.5% 100%, 70% 40%, 67.5% 100%, 65% 40%, 62.5% 100%, 60% 40%, 57.5% 100%, 55% 40%, 52.5% 100%, 50% 40%, 47.5% 100%, 45% 40%, 42.5% 100%, 40% 40%, 37.5% 100%, 35% 40%, 32.5% 100%, 30% 40%, 27.5% 100%, 25% 40%, 22.5% 100%, 20% 40%, 17.5% 100%, 15% 40%, 12.5% 100%, 10% 40%, 7.5% 100%, 5% 40%, 2.5% 100%, 0 40%); }
+
+  main { flex: 1; padding: 8px 18px 6px; min-height: 0; display: flex; flex-direction: column; }
+  h2 { font-family: "Alfa Slab One", serif; font-weight: 400; font-size: 23px; line-height: 1; margin: 0; text-align: center; letter-spacing: .4px; }
+  h2 .red { color: var(--red); display: block; font-size: 17px; margin-top: 3px; }
+  .note { font-size: 13.5px; line-height: 1.22; text-align: center; margin: 6px 2px 7px; }
+  .sched-title { font-family: "Alfa Slab One", serif; font-weight: 400; font-size: 13px; letter-spacing: 1px; color: var(--red); text-align: center; margin-bottom: 4px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  td { padding: 1.5px 0; border-bottom: 1px dashed #d8ccb5; vertical-align: top; }
+  tr:last-child td { border-bottom: 0; }
+  td.day { font-weight: 700; letter-spacing: 1px; width: 46px; color: var(--red); }
+  td small { display: block; font-size: 11.5px; color: var(--muted); line-height: 1.1; }
+  .scan { display: flex; align-items: center; gap: 12px; margin-top: auto; padding-top: 6px; }
+  .qr { background: #fff; border: 1.5px solid #e2d8c4; border-radius: 7px; padding: 5px; flex: none; }
+  .qr img { width: 62px; height: 62px; display: block; }
+  .scan p { margin: 0; font-size: 14px; line-height: 1.15; font-weight: 600; }
+  .scan p span { display: block; font-weight: 400; color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+
+  footer { flex: none; background: var(--red); color: #fff; text-align: center; padding: 6px 10px 7px; border-radius: 0 0 6px 6px; }
+  .url { font-family: "Alfa Slab One", serif; font-weight: 400; font-size: 12.5px; letter-spacing: .4px; }
+  .addr { font-size: 11px; letter-spacing: 1.6px; font-weight: 700; margin-top: 2px; }
+</style>
+</head>
+<body>
+<div class="sheet" id="sheet"></div>
+
+<template id="card">
+  <div class="card"><div class="inner">
+    <header>
+      <img src="../public/logo-red.png" alt="FTO Barbeque" />
+      <h1>FEED <span class="the">THE</span> OBSESSION</h1>
+    </header>
+    <div class="zz"></div>
+    <main>
+      <h2>THANK YOU!<span class="red">FROM SCOOTER &amp; THE CREW</span></h2>
+      <p class="note">We're a veteran-owned, family-run smokehouse in DeLand, and every plate is smoked low and slow right here. We appreciate you more than you know.</p>
+      <div class="sched-title">THE SMOKE SCHEDULE</div>
+      <table>
+        <tr><td class="day">MON</td><td>Smoked Bologna</td></tr>
+        <tr><td class="day">TUE</td><td>BBQ Tacos &amp; Nachos</td></tr>
+        <tr><td class="day">WED</td><td>Spud Night</td></tr>
+        <tr><td class="day">THU</td><td>Sliders<small>Full rack rib special every other Thursday</small></td></tr>
+        <tr><td class="day">FRI</td><td>Smoked Wings<small>50¢ wings the first Friday of every month</small></td></tr>
+      </table>
+      <div class="scan">
+        <div class="qr"><img src="qr-bag.svg" alt="QR code for this week's specials" /></div>
+        <p>Scan for this week's specials &amp; deals<span>Follow the smoke and come see us sometime.</span></p>
+      </div>
+    </main>
+    <footer>
+      <div class="url">FEEDTHEOBSESSIONBBQ.COM</div>
+      <div class="addr">1204 E NEW YORK AVE · DELAND</div>
+    </footer>
+  </div></div>
+</template>
+<script>
+  const t = document.getElementById("card"), sheet = document.getElementById("sheet");
+  for (let i = 0; i < 4; i++) sheet.appendChild(t.content.cloneNode(true));
+</script>
+</body>
+</html>
