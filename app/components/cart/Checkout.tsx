@@ -5,9 +5,21 @@ import Script from "next/script";
 import { useCart } from "./CartContext";
 import { business } from "@/lib/business";
 import { getOpenStatus, getPickupOptions, type PickupOption } from "@/lib/hours";
-import { cleanAddress, DELIVERY_AREA_LABEL, DELIVERY_MIN_CENTS, zipDeliverable } from "@/lib/delivery";
+import { addressLine, cleanAddress, DELIVERY_AREA_LABEL, DELIVERY_MIN_CENTS, zipDeliverable } from "@/lib/delivery";
 
 export type DeliveryQuote = { feeCents: number; dropoffEta: string };
+// What the confirmation page needs once the card goes through.
+export type PlacedOrder = {
+  mode: "PICKUP" | "DELIVERY";
+  channel: "TAKE_OUT" | "DINE_IN";
+  table?: string;
+  name: string;
+  email: string;
+  when: string | null; // "Tomorrow at 12:00 PM", or null for ASAP
+  address?: string; // delivery address
+  trackingUrl?: string;
+  tipped: boolean;
+};
 const money = (cents: number) => `$${(cents / 100).toFixed(2)}`;
 const etTime = (iso: string) =>
   new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", timeZone: "America/New_York" });
@@ -42,6 +54,7 @@ export default function Checkout({
   mode = "PICKUP",
   feesCents = 0,
   onDeliveryQuote,
+  onPlaced,
 }: {
   onDone?: () => void;
   instructions?: string;
@@ -50,6 +63,7 @@ export default function Checkout({
   mode?: "PICKUP" | "DELIVERY";
   feesCents?: number; // delivery: Uber fee + service fee, shown in the Pay amount
   onDeliveryQuote?: (q: DeliveryQuote | null) => void; // live Uber price, up to the order page's totals
+  onPlaced?: (order: PlacedOrder) => void; // paid: the order page swaps to the confirmation
 }) {
   const { items, totalCents, clear } = useCart();
   const isDelivery = mode === "DELIVERY";
@@ -255,6 +269,18 @@ export default function Checkout({
       } catch {
         /* ignore */
       }
+      const slot = pickup === "asap" ? undefined : pickupOpts?.slots.find((s) => s.iso === pickup);
+      onPlaced?.({
+        mode,
+        channel: isDelivery ? "TAKE_OUT" : channel,
+        table: !isDelivery && channel === "DINE_IN" ? table.trim() : undefined,
+        name: name.trim(),
+        email: email.trim(),
+        when: slot ? `${slot.day} at ${slot.time}` : null,
+        address: addr ? addressLine(addr) : undefined,
+        trackingUrl: ok.trackingUrl,
+        tipped: tipCents > 0,
+      });
       clear();
       setStatus("done");
     } catch (e) {

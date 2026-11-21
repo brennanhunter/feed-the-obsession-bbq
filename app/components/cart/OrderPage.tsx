@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useCart } from "./CartContext";
-import Checkout, { type DeliveryQuote } from "./Checkout";
+import Checkout, { type DeliveryQuote, type PlacedOrder } from "./Checkout";
 import TipPicker from "./TipPicker";
 import { NO_TIP, tipCentsFor, type TipChoice } from "@/lib/tips";
 import { ItemRow, ItemSheet } from "../MenuWrapper";
@@ -58,6 +58,87 @@ function PickupCard() {
   );
 }
 
+// Shown in place of the cart once the card goes through.
+function OrderPlaced({ order }: { order: PlacedOrder }) {
+  const first = order.name.split(/\s+/)[0] || order.name;
+  const delivery = order.mode === "DELIVERY";
+  const row = (label: string, value: string) => (
+    <div className="flex flex-col sm:flex-row sm:gap-4 py-3 border-b border-white/10 last:border-0">
+      <dt className="sm:w-32 shrink-0 text-xs uppercase tracking-[0.2em] text-white/40 pt-0.5">{label}</dt>
+      <dd className="text-white">{value}</dd>
+    </div>
+  );
+  return (
+    <div className="container mx-auto max-w-2xl px-4 py-16 md:py-24 text-center">
+      <p className="text-5xl" aria-hidden>
+        🍖
+      </p>
+      <h1 className="mt-4 font-display text-4xl md:text-5xl tracking-wider uppercase">Order placed!</h1>
+      <p className="mt-4 text-lg text-white/75">
+        Thanks, {first}!{" "}
+        {delivery
+          ? "Your order is in, and an Uber driver is booked to bring it to you. You'll get texts with live tracking."
+          : order.channel === "DINE_IN"
+            ? "Your order is in. Grab a seat and we'll bring it out."
+            : "Your order is in and headed for the smoker."}
+        {order.tipped && !delivery ? " And thanks for the tip, the crew appreciates it." : ""}
+      </p>
+
+      <dl className="mt-8 rounded-2xl border border-white/10 bg-white/[0.04] px-6 py-2 text-left">
+        {row(
+          "When",
+          delivery
+            ? order.when
+              ? `Leaves our smoker ${order.when}, and reaches you about 15–30 minutes later`
+              : "About 45–60 minutes"
+            : order.when
+              ? `Ready ${order.when}`
+              : "Ready in about 15–20 minutes"
+        )}
+        {row(
+          delivery ? "Delivering to" : order.channel === "DINE_IN" ? "Table" : "Pick up at",
+          delivery ? order.address ?? "" : order.channel === "DINE_IN" ? order.table || "—" : `${business.name}, ${business.address.full}`
+        )}
+        {row("Confirmation", `Sent to ${order.email}`)}
+      </dl>
+
+      <div className="mt-8 flex flex-wrap justify-center gap-3">
+        {delivery && order.trackingUrl ? (
+          <a
+            href={order.trackingUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-7 py-3 rounded-full bg-brand-primary font-bold uppercase tracking-wide hover:opacity-85 transition-all"
+          >
+            Track your delivery
+          </a>
+        ) : order.channel !== "DINE_IN" ? (
+          <a
+            href={business.maps.directions}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-7 py-3 rounded-full bg-brand-primary font-bold uppercase tracking-wide hover:opacity-85 transition-all"
+          >
+            Get directions
+          </a>
+        ) : null}
+        <Link
+          href="/menu"
+          className="px-7 py-3 rounded-full border border-white/30 font-bold uppercase tracking-wide hover:border-brand-primary hover:text-brand-primary transition-all"
+        >
+          Back to the menu
+        </Link>
+      </div>
+      <p className="mt-6 text-sm text-white/50">
+        Questions? Call{" "}
+        <a href={business.phoneHref} className="text-brand-primary font-semibold">
+          {business.phone}
+        </a>
+      </p>
+    </div>
+  );
+}
+
 export default function OrderPage({ extras, menu }: { extras: MenuItem[]; menu: MenuItem[] }) {
   const { items, totalCents, setQty, remove, replace } = useCart();
   // Square's exact Florida sales tax for this cart (estimated until it answers).
@@ -72,7 +153,12 @@ export default function OrderPage({ extras, menu }: { extras: MenuItem[]; menu: 
   // Optional tip, charged on top of the food: the crew's on pickup, the driver's on delivery.
   const [tip, setTip] = useState<TipChoice>(NO_TIP);
   const tipCents = tipCentsFor(tip, totalCents); // tip on the food, before tax
-  const [done, setDone] = useState(false);
+  // Paid: swap the cart for the confirmation (the cart itself is cleared).
+  const [placed, setPlaced] = useState<PlacedOrder | null>(null);
+  const done = placed !== null;
+  useEffect(() => {
+    if (placed) window.scrollTo({ top: 0 });
+  }, [placed]);
   // Avoid a flash of "empty" before the saved cart loads from localStorage.
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => setHydrated(true), []);
@@ -100,6 +186,8 @@ export default function OrderPage({ extras, menu }: { extras: MenuItem[]; menu: 
   }, [hydrated, items.length, done]);
 
   if (!hydrated) return <div className="container mx-auto max-w-5xl px-4 py-24" />;
+
+  if (placed) return <OrderPlaced order={placed} />;
 
   if (items.length === 0 && !done) {
     return (
@@ -314,7 +402,7 @@ export default function OrderPage({ extras, menu }: { extras: MenuItem[]; menu: 
               mode={isDelivery ? "DELIVERY" : "PICKUP"}
               feesCents={deliveryFee + serviceFee}
               onDeliveryQuote={setDeliveryQuote}
-              onDone={() => setDone(true)}
+              onPlaced={setPlaced}
             />
           </section>
         </aside>
