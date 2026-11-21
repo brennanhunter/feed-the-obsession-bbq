@@ -19,6 +19,7 @@ import {
   PREP_MINUTES,
   SCHEDULED_PICKUP_WINDOW_MINUTES,
   serviceFeeCents,
+  xtremeryFeeCents,
   type DeliveryAddress,
   zipDeliverable,
 } from "@/lib/delivery";
@@ -223,7 +224,7 @@ export async function POST(req: Request) {
           ? {
               serviceCharges: [
                 { name: "Delivery (Uber)", amountMoney: usd(deliveryFee), calculationPhase: "TOTAL_PHASE" as const, taxable: false },
-                { name: "Service fee (10%)", amountMoney: usd(serviceFee), calculationPhase: "TOTAL_PHASE" as const, taxable: false },
+                { name: "Service fee", amountMoney: usd(serviceFee), calculationPhase: "TOTAL_PHASE" as const, taxable: false },
                 ...(tipCents > 0
                   ? [{ name: "Driver tip (100% to driver)", amountMoney: usd(tipCents), calculationPhase: "TOTAL_PHASE" as const, taxable: false }]
                   : []),
@@ -359,6 +360,7 @@ export async function POST(req: Request) {
         trackingUrl: booked.delivery.trackingUrl,
         feeCents: deliveryFee,
         serviceFeeCents: serviceFee,
+        xtremeryCents: xtremeryFeeCents(foodCentsCalc),
         driverTipCents: tipCents,
       };
     }

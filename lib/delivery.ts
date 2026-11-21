@@ -2,8 +2,9 @@
 // page and the checkout/quote routes, so client and server agree on the rules.
 //
 // Pricing (Hunter, 2026-11-20): food at shop prices, so FTO makes what it makes
-// in person; Uber's delivery fee passed through at cost; a 10% service fee (the
-// Xtremery cut); and an optional driver tip that goes 100% to the driver.
+// in person; Uber's delivery fee passed through at cost; a service fee of 10%
+// (the Xtremery cut) + $1 that stays with FTO, so a website delivery pays FTO a
+// little MORE than a walk-in; and an optional driver tip, 100% to the driver.
 
 // "on" = everyone sees Delivery. "preview" = only browsers that opened
 // /order?delivery=preview once (for testing and Uber's pilot). Anything else = off.
@@ -28,8 +29,10 @@ export const DELIVERY_ZIPS: Record<string, string> = {
 export const DELIVERY_AREA_LABEL = "DeLand, Orange City, Lake Helen, De Leon Springs and Glenwood";
 export const MAX_DELIVERY_FEE_CENTS = 14_99;
 export const zipDeliverable = (zip: string) => zip in DELIVERY_ZIPS;
-export const SERVICE_FEE_PCT = 10;
-export const serviceFeeCents = (foodCents: number) => Math.round((foodCents * SERVICE_FEE_PCT) / 100);
+export const SERVICE_FEE_PCT = 10; // Xtremery's cut (Hunter invoices this part)
+export const FTO_DELIVERY_BONUS_CENTS = 100; // stays with FTO on every website delivery
+export const xtremeryFeeCents = (foodCents: number) => Math.round((foodCents * SERVICE_FEE_PCT) / 100);
+export const serviceFeeCents = (foodCents: number) => xtremeryFeeCents(foodCents) + FTO_DELIVERY_BONUS_CENTS;
 
 // Driver tip buttons ($3 / $5 / $7 + Other); a flat amount reads right for a driver.
 export const DRIVER_TIP_FLATS_CENTS = [300, 500, 700] as const;

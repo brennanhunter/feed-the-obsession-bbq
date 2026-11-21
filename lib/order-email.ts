@@ -7,7 +7,8 @@ export type OrderEmailDelivery = {
   notes?: string;
   trackingUrl?: string;
   feeCents: number;
-  serviceFeeCents: number;
+  serviceFeeCents: number; // 10% (Xtremery) + $1 (stays with FTO)
+  xtremeryCents?: number; // the 10% part, which FTO reimburses to Xtremery
   driverTipCents: number;
 };
 

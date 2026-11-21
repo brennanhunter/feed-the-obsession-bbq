@@ -373,7 +373,7 @@ export default function OrderPage({ extras, menu }: { extras: MenuItem[]; menu: 
                         <dd>{deliveryQuote ? money(deliveryQuote.feeCents) : <span className="text-white/40">add address</span>}</dd>
                       </div>
                       <div className="flex justify-between text-sm text-white/70">
-                        <dt>Service fee (10%)</dt>
+                        <dt>Service fee</dt>
                         <dd>{money(serviceFee)}</dd>
                       </div>
                     </>
