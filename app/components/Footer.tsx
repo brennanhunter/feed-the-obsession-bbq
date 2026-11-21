@@ -96,6 +96,11 @@ export default function Footer() {
         <p className="text-center mt-10 text-white/50">
           © {new Date().getFullYear()} Feed The Obsession BBQ. All Rights Reserved.
         </p>
+        <p className="text-center mt-2 text-sm text-white/40">
+          <a href="/privacy" className="hover:text-brand-primary transition-all">Privacy Policy</a>
+          <span className="mx-2">·</span>
+          <a href="/terms" className="hover:text-brand-primary transition-all">Terms of Service</a>
+        </p>
       </div>
     </div>
   );
