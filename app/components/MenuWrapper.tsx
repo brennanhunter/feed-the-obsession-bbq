@@ -74,7 +74,11 @@ function ChoiceStep({
         </h4>
         <span className={`text-xs whitespace-nowrap ${done ? "text-green-400" : left > 0 ? "text-brand-primary" : "text-white/50"}`}>
           {done ? "✓ Done" : left > 0 ? `${rule} · ${left} to go` : rule}
-          {choice.repeats && !single && !done ? " · doubles OK" : ""}
+          {choice.repeats && !single && !done
+            ? choice.maxEach > 1
+              ? ` · up to ${choice.maxEach} of one`
+              : " · doubles OK"
+            : ""}
         </span>
       </div>
       <div className="flex flex-wrap gap-2">
@@ -82,7 +86,8 @@ function ChoiceStep({
           const n = counts[o.id] ?? 0;
           const on = n > 0;
           const tap = () => (single || !choice.repeats ? (on ? onRemove(o.id) : onAdd(o.id)) : onAdd(o.id));
-          const disabled = !single && (choice.repeats ? full : !on && full);
+          const atCap = choice.repeats && choice.maxEach > 0 && n >= choice.maxEach;
+          const disabled = !single && (choice.repeats ? full || atCap : !on && full);
           return (
             <span
               key={o.id}
@@ -188,7 +193,11 @@ export function ItemSheet({
         next = { ...prev };
         for (const o of choice.options) delete next[o.id];
         next[id] = 1;
-      } else if (!(choice.max > 0 && total >= choice.max) && !(!choice.repeats && prev[id])) {
+      } else if (
+        !(choice.max > 0 && total >= choice.max) &&
+        !(!choice.repeats && prev[id]) &&
+        !(choice.repeats && choice.maxEach > 0 && (prev[id] ?? 0) >= choice.maxEach)
+      ) {
         next = { ...prev, [id]: (prev[id] ?? 0) + 1 };
       }
       advance(prev, next);

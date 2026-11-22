@@ -41,8 +41,14 @@ export type Choice = {
   min: number; // 0 = optional
   max: number; // 0 = no limit
   repeats: boolean; // Square's allow_quantities: the same option more than once (double brisket)
+  maxEach: number; // most of any ONE option (0 = up to max). Square can't store this, see MAX_EACH.
   options: ChoiceOption[];
 };
+
+// Per-option caps Square has no field for, keyed by modifier list name.
+// Owner's rule (Nov 2026): a meat can be doubled but not tripled — 2 Meat Plate
+// can be double brisket, 3 Meat Plate can be brisket ×2 + ribs, never brisket ×3.
+const MAX_EACH: Record<string, number> = { "pick your meats": 2 };
 export type ChoicePick = { id: string; qty: number }; // a chosen option and how many
 
 const ticketLabel = (listName: string) => {
@@ -90,8 +96,15 @@ export function checkPicks(
     const counts = c.options.map((o) => merged.get(o.id) ?? 0);
     const total = counts.reduce((s, n) => s + n, 0);
     const what = c.label.toLowerCase();
-    if (!c.repeats && counts.some((n) => n > 1))
-      return { ok: false, error: `Each ${what} choice can only be picked once for the ${item.title}` };
+    const cap = c.repeats ? c.maxEach : 1;
+    if (cap > 0 && counts.some((n) => n > cap))
+      return {
+        ok: false,
+        error:
+          cap === 1
+            ? `Each ${what} choice can only be picked once for the ${item.title}`
+            : `You can pick up to ${cap} of the same ${what.replace(/s$/, "")} for the ${item.title}`,
+      };
     if (total < c.min)
       return {
         ok: false,
@@ -193,10 +206,10 @@ function describe(title: string): string {
     slider: "Smoked meat piled on a slider bun.",
     "sliced pork no side": "Sliced smoked pork on its own.",
     "sliced pork plate": "Sliced smoked pork. Comes with one side.",
-    "2 meat with side": "Pick two smoked meats. Comes with two sides.",
-    "2 meat plate": "Pick two smoked meats. Comes with two sides.",
-    "3 meat with 1 side": "Pick three smoked meats. Comes with three sides.",
-    "3 meat plate": "Pick three smoked meats. Comes with three sides.",
+    "2 meat with side": "Pick two smoked meats (doubles OK). Comes with two sides.",
+    "2 meat plate": "Pick two smoked meats (doubles OK). Comes with two sides.",
+    "3 meat with 1 side": "Pick three smoked meats (up to 2 of one). Comes with three sides.",
+    "3 meat plate": "Pick three smoked meats (up to 2 of one). Comes with three sides.",
     sampler: "A run at everything on the pit. Built to share.",
     "ribs full rack": "A whole rack, smoked low and slow.",
     "whole pork butt": "Smoked whole and ready to pull.",
@@ -288,6 +301,7 @@ export async function getMenu(): Promise<MenuItem[]> {
           min: pickLimit(info.minSelectedModifiers, l.min),
           max: pickLimit(info.maxSelectedModifiers, l.max),
           repeats: l.repeats,
+          maxEach: l.repeats ? (MAX_EACH[l.name.toLowerCase()] ?? 0) : 1,
           options: l.options,
         };
       })
