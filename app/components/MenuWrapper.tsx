@@ -333,10 +333,13 @@ export function ItemRow({ item }: { item: MenuItem }) {
   }, [item.special]);
 
   const orderable = available && !item.soldOut;
-  // "Pick 2 meats · 1 side" — what the panel will ask for, at a glance.
+  // "Pick 2 meats · 2 sides" — what the panel will ask for, at a glance.
   const asks = (item.choices ?? [])
     .filter((c) => c.min > 0)
-    .map((c) => `${c.min} ${c.label.toLowerCase()}`)
+    .map((c) => {
+      const noun = c.label.toLowerCase();
+      return `${c.min} ${c.min > 1 && !noun.endsWith("s") ? `${noun}s` : noun}`;
+    })
     .join(" · ");
 
   return (
