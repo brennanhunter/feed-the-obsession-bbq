@@ -76,7 +76,6 @@ export default function Checkout({
   const [trackingUrl, setTrackingUrl] = useState("");
   const [tipped, setTipped] = useState(false); // remembered past clear() for the thank-you
   const [channel, setChannel] = useState<"TAKE_OUT" | "DINE_IN">("TAKE_OUT");
-  const [table, setTable] = useState("");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
@@ -219,10 +218,6 @@ export default function Checkout({
         return;
       }
     }
-    if (!isDelivery && channel === "DINE_IN" && !table.trim()) {
-      setError("Please enter your table number.");
-      return;
-    }
     if (!pickup) {
       setError("Please choose a pickup time.");
       return;
@@ -239,7 +234,6 @@ export default function Checkout({
           sourceId: result.token,
           items: items.map((i) => ({ id: i.id, quantity: i.qty, picks: i.picks, note: i.note })),
           channel: isDelivery ? "TAKE_OUT" : channel,
-          table: !isDelivery && channel === "DINE_IN" ? table.trim() : undefined,
           ...(isDelivery && addr
             ? { fulfillment: "DELIVERY", delivery: { ...addr, expectedFeeCents: deliveryQuote?.feeCents } }
             : {}),
@@ -273,7 +267,6 @@ export default function Checkout({
       onPlaced?.({
         mode,
         channel: isDelivery ? "TAKE_OUT" : channel,
-        table: !isDelivery && channel === "DINE_IN" ? table.trim() : undefined,
         name: name.trim(),
         email: email.trim(),
         when: slot ? `${slot.day} at ${slot.time}` : null,
@@ -513,12 +506,7 @@ export default function Checkout({
       </div>
 
       {!isDelivery && channel === "DINE_IN" && (
-        <input
-          placeholder="Table number"
-          value={table}
-          onChange={(e) => setTable(e.target.value)}
-          className="w-full mb-3 p-2.5 text-base rounded bg-black/40 border border-white/20"
-        />
+        <p className="mb-3 text-sm text-white/70">Eating here? Grab a seat. We&apos;ll bring it out and call your name.</p>
       )}
       <input
         placeholder="Name"

@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Feed The Obsession BBQ — Review Poster</title>
+<!-- Letter-size "review us on Google" poster. QR (qr-review.svg) = the Google
+     review deep link in lib/business.ts. Keep the ask neutral: Google bans
+     asking only for positive / 5-star reviews, and never offer anything for one.
+     Build: node print/build.mjs review-poster -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Barlow+Condensed:wght@400;600;700&display=swap" rel="stylesheet" />
+<style>
+  @page { size: letter portrait; margin: 0; }
+  :root { --red: #c1282d; --ink: #201a16; --muted: #6f6458; --cream: #f5efe1; --black: #0d0d0d; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--black); }
+  body { width: 816px; height: 1056px; overflow: hidden; font-family: "Barlow Condensed", sans-serif; color: var(--ink); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .page { width: 816px; height: 1056px; display: flex; flex-direction: column; background: var(--black); }
+
+  header { color: #fff; text-align: center; padding: 34px 0 22px; }
+  header img { width: 140px; display: block; margin: 0 auto; }
+  h1 { font-family: "Alfa Slab One", serif; font-weight: 400; font-size: 58px; letter-spacing: 1.5px; margin: 18px 0 0; line-height: 1; }
+  h1 .the { color: var(--red); }
+  .tag { margin-top: 14px; font-size: 17px; font-weight: 600; letter-spacing: 6px; color: #c9c2b4; }
+
+  .zz { height: 22px; background: var(--red); clip-path: polygon(0 100%, 0 40%, 3% 0, 6% 40%, 9% 0, 12% 40%, 15% 0, 18% 40%, 21% 0, 24% 40%, 27% 0, 30% 40%, 33% 0, 36% 40%, 39% 0, 42% 40%, 45% 0, 48% 40%, 51% 0, 54% 40%, 57% 0, 60% 40%, 63% 0, 66% 40%, 69% 0, 72% 40%, 75% 0, 78% 40%, 81% 0, 84% 40%, 87% 0, 90% 40%, 93% 0, 96% 40%, 99% 0, 100% 20%, 100% 100%); }
+  .zz.down { transform: scaleY(-1); }
+
+  main { flex: 1; margin: 0 40px; background: var(--cream); border-radius: 18px; text-align: center; padding: 34px 40px 28px; display: flex; flex-direction: column; align-items: center; }
+  h2 { font-family: "Alfa Slab One", serif; font-weight: 400; font-size: 54px; line-height: 1.02; margin: 0; letter-spacing: .5px; }
+  h2 .red { color: var(--red); display: block; }
+  .sub { font-size: 22px; color: var(--muted); margin: 14px 0 22px; }
+  .qr { background: #fff; border: 2px solid #e2d8c4; border-radius: 14px; padding: 22px; }
+  .qr img { width: 226px; height: 226px; display: block; }
+  .point { font-size: 20px; color: var(--muted); margin-top: 20px; }
+  .scan { font-family: "Alfa Slab One", serif; font-weight: 400; font-size: 26px; color: var(--red); letter-spacing: .5px; margin-top: 4px; }
+
+  footer { color: #fff; text-align: center; padding: 18px 20px 30px; }
+  .addr { font-size: 21px; font-weight: 600; letter-spacing: 1px; }
+  .hours { font-size: 17px; letter-spacing: 3px; font-weight: 700; color: #9b9384; margin-top: 6px; }
+  .dot { color: var(--red); margin: 0 8px; }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <img src="../public/logo-red.png" alt="FTO Barbeque" />
+    <h1>FEED <span class="the">THE</span> OBSESSION</h1>
+    <div class="tag">VETERAN-OWNED <span class="dot">•</span> WOOD-SMOKED <span class="dot">•</span> DELAND, FL</div>
+  </header>
+  <div class="zz"></div>
+  <main>
+    <h2>HOW DID WE DO? <span class="red">LEAVE US A REVIEW</span></h2>
+    <p class="sub">Good, bad or in between, we read every one.</p>
+    <div class="qr"><img src="qr-review.svg" alt="QR code to review us on Google" /></div>
+    <p class="point">Point your phone camera at the code</p>
+    <p class="scan">SCAN TO REVIEW US ON GOOGLE</p>
+  </main>
+  <div class="zz down"></div>
+  <footer>
+    <div class="addr">1204 E NEW YORK AVE, DELAND, FL <span class="dot">•</span> 386-507-4309</div>
+    <div class="hours">DAILY 12–8 PM <span class="dot">•</span> FRIDAY 12–9 PM</div>
+  </footer>
+</div>
+</body>
+</html>

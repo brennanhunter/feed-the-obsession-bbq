@@ -81,8 +81,8 @@ function OrderPlaced({ order }: { order: PlacedOrder }) {
               : "Ready in about 15–20 minutes"
         )}
         {row(
-          delivery ? "Delivering to" : order.channel === "DINE_IN" ? "Table" : "Pick up at",
-          delivery ? order.address ?? "" : order.channel === "DINE_IN" ? order.table || "—" : `${business.name}, ${business.address.full}`
+          delivery ? "Delivering to" : order.channel === "DINE_IN" ? "Dine-in" : "Pick up at",
+          delivery ? order.address ?? "" : order.channel === "DINE_IN" ? `We'll call out ${first}` : `${business.name}, ${business.address.full}`
         )}
         {row("Confirmation", `Sent to ${order.email}`)}
       </dl>
