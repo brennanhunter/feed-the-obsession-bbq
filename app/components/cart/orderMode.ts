@@ -11,11 +11,17 @@ const DINE_KEY = "fto-dine-in";
 
 export const MODE_LABEL: Record<OrderMode, string> = { DINE_IN: "Dine-in", PICKUP: "Pickup", DELIVERY: "Delivery" };
 
-// The printed bar card's QR (/menu?utm_source=table_card) and /menu?mode=dine-in
-// open the menu in Dine-in.
-function fromBarCard(): boolean {
+// A link can choose the mode: ?mode=dine-in | pickup | delivery. Google Business
+// Profile's "Order online" links use pickup/delivery so the menu opens on the
+// one the customer tapped; the printed bar card's QR (utm_source=table_card)
+// opens Dine-in.
+function modeFromUrl(): OrderMode | null {
   const q = new URLSearchParams(window.location.search);
-  return q.get("utm_source") === "table_card" || q.get("mode") === "dine-in";
+  const m = q.get("mode")?.toLowerCase();
+  if (q.get("utm_source") === "table_card" || m === "dine-in") return "DINE_IN";
+  if (m === "pickup" || m === "takeout" || m === "take-out") return "PICKUP";
+  if (m === "delivery") return "DELIVERY";
+  return null;
 }
 
 // Delivery shows for everyone when NEXT_PUBLIC_DELIVERY=on. With "preview",
@@ -42,11 +48,12 @@ export function modesAvailable(): OrderMode[] {
 export function readOrderMode(): OrderMode {
   if (typeof window === "undefined") return "PICKUP";
   try {
-    if (fromBarCard()) sessionStorage.setItem(DINE_KEY, "1");
+    const fromUrl = modeFromUrl();
+    if (fromUrl) saveOrderMode(fromUrl);
     if (sessionStorage.getItem(DINE_KEY) === "1") return "DINE_IN";
     return localStorage.getItem(KEY) === "DELIVERY" ? "DELIVERY" : "PICKUP";
   } catch {
-    return fromBarCard() ? "DINE_IN" : "PICKUP";
+    return modeFromUrl() ?? "PICKUP";
   }
 }
 
