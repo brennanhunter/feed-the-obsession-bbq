@@ -10,7 +10,7 @@ import { addressLine, cleanAddress, DELIVERY_AREA_LABEL, DELIVERY_MIN_CENTS, zip
 export type DeliveryQuote = { feeCents: number; dropoffEta: string };
 // What the confirmation page needs once the card goes through.
 export type PlacedOrder = {
-  mode: "PICKUP" | "DELIVERY";
+  mode: "DINE_IN" | "PICKUP" | "DELIVERY";
   channel: "TAKE_OUT" | "DINE_IN";
   table?: string;
   name: string;
@@ -60,13 +60,14 @@ export default function Checkout({
   instructions?: string;
   tipCents?: number; // optional tip picked on the order page (crew tip, or the driver's on delivery)
   taxCents?: number; // Florida sales tax from Square's quote (Square applies it at checkout)
-  mode?: "PICKUP" | "DELIVERY";
+  mode?: "DINE_IN" | "PICKUP" | "DELIVERY";
   feesCents?: number; // delivery: Uber fee + service fee, shown in the Pay amount
   onDeliveryQuote?: (q: DeliveryQuote | null) => void; // live Uber price, up to the order page's totals
   onPlaced?: (order: PlacedOrder) => void; // paid: the order page swaps to the confirmation
 }) {
   const { items, totalCents, clear } = useCart();
   const isDelivery = mode === "DELIVERY";
+  const channel: "TAKE_OUT" | "DINE_IN" = mode === "DINE_IN" ? "DINE_IN" : "TAKE_OUT";
   // Delivery address (remembered on this device with the name/phone/email).
   const [street, setStreet] = useState("");
   const [unit, setUnit] = useState("");
@@ -75,7 +76,6 @@ export default function Checkout({
   const [dropNotes, setDropNotes] = useState("");
   const [trackingUrl, setTrackingUrl] = useState("");
   const [tipped, setTipped] = useState(false); // remembered past clear() for the thank-you
-  const [channel, setChannel] = useState<"TAKE_OUT" | "DINE_IN">("TAKE_OUT");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
@@ -376,7 +376,7 @@ export default function Checkout({
                 Whole cuts are smoked to order — pick a time {leadDays} or more days out
               </span>
             ) : pickupOpts.asap ? (
-              <span className="text-white/70">{isDelivery ? "Delivery time" : "Pickup time"}</span>
+              <span className="text-white/70">{isDelivery ? "Delivery time" : channel === "DINE_IN" ? "Ready time" : "Pickup time"}</span>
             ) : (
               <span className="text-brand-primary font-semibold">
                 We&apos;re closed right now — schedule a {isDelivery ? "delivery" : "pickup"} time
@@ -489,25 +489,6 @@ export default function Checkout({
         </div>
       )}
 
-      {/* Dine-in vs Take-out */}
-      <div className={isDelivery ? "hidden" : "flex gap-3 mb-4"}>
-        {(["TAKE_OUT", "DINE_IN"] as const).map((c) => (
-          <button
-            key={c}
-            type="button"
-            onClick={() => setChannel(c)}
-            className={`flex-1 py-2 rounded-full border transition-all ${
-              channel === c ? "bg-brand-primary border-brand-primary" : "border-white/20 hover:border-brand-primary"
-            }`}
-          >
-            {c === "TAKE_OUT" ? "Take-out" : "Dine-in"}
-          </button>
-        ))}
-      </div>
-
-      {!isDelivery && channel === "DINE_IN" && (
-        <p className="mb-3 text-sm text-white/70">Eating here? Grab a seat. We&apos;ll bring it out and call your name.</p>
-      )}
       <input
         placeholder="Name"
         value={name}

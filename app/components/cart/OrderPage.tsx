@@ -12,7 +12,7 @@ import { business } from "@/lib/business";
 import { getOpenStatus } from "@/lib/hours";
 import type { MenuItem } from "@/lib/catalog";
 import { DELIVERY_AREA_LABEL, DELIVERY_MIN_CENTS, DRIVER_TIP_FLATS_CENTS, serviceFeeCents } from "@/lib/delivery";
-import { deliveryVisible, readOrderMode, saveOrderMode, type OrderMode } from "./orderMode";
+import { MODE_LABEL, modesAvailable, readOrderMode, saveOrderMode, type OrderMode } from "./orderMode";
 
 const money = (cents: number) => `$${(cents / 100).toFixed(2)}`;
 
@@ -151,8 +151,10 @@ export default function OrderPage({ extras, menu }: { extras: MenuItem[]; menu: 
   // Starts on whatever the customer picked on the menu. (Read lazily: the page
   // renders a blank shell until hydrated, so the server's "PICKUP" never shows.)
   const [mode, setMode] = useState<OrderMode>(readOrderMode);
-  const canDeliver = hydrated && deliveryVisible();
-  const isDelivery = canDeliver && mode === "DELIVERY";
+  const modes: OrderMode[] = hydrated ? modesAvailable() : ["PICKUP"];
+  const current: OrderMode = modes.includes(mode) ? mode : "PICKUP";
+  const isDelivery = current === "DELIVERY";
+  const isDineIn = current === "DINE_IN";
   const [deliveryQuote, setDeliveryQuote] = useState<DeliveryQuote | null>(null);
   const deliveryFee = isDelivery ? deliveryQuote?.feeCents ?? 0 : 0;
   const serviceFee = isDelivery ? serviceFeeCents(totalCents) : 0;
@@ -283,7 +285,7 @@ export default function OrderPage({ extras, menu }: { extras: MenuItem[]; menu: 
             </section>
           )}
 
-          {!isDelivery && (
+          {current === "PICKUP" && (
             <div className="lg:hidden">
               <PickupCard />
             </div>
@@ -292,7 +294,7 @@ export default function OrderPage({ extras, menu }: { extras: MenuItem[]; menu: 
 
         {/* Right: pickup + pay (sticky on desktop) */}
         <aside className="space-y-6 lg:sticky lg:top-28">
-          {!isDelivery && (
+          {current === "PICKUP" && (
             <div className="hidden lg:block">
               <PickupCard />
             </div>
@@ -301,37 +303,37 @@ export default function OrderPage({ extras, menu }: { extras: MenuItem[]; menu: 
             {!done && (
               <>
                 <h2 id="pay-h" className="font-display text-xl tracking-wider uppercase">
-                  2. {isDelivery ? "Delivery" : "Pickup"} &amp; payment
+                  2. {MODE_LABEL[current]} &amp; payment
                 </h2>
-                {canDeliver && (
-                  <div className="mt-4">
-                    <div
-                      role="radiogroup"
-                      aria-label="Pickup or delivery"
-                      className="grid grid-cols-2 gap-1 p-1 rounded-full bg-black/40 border border-white/10"
-                    >
-                      {(["PICKUP", "DELIVERY"] as const).map((m) => (
-                        <button
-                          key={m}
-                          type="button"
-                          role="radio"
-                          aria-checked={mode === m}
-                          onClick={() => pickMode(m)}
-                          className={`py-2.5 rounded-full text-sm font-bold uppercase tracking-wider transition-all ${
-                            mode === m ? "bg-brand-primary text-white" : "text-white/60 hover:text-white"
-                          }`}
-                        >
-                          {m === "PICKUP" ? "Pickup" : "Delivery"}
-                        </button>
-                      ))}
-                    </div>
-                    <p className="mt-2 text-xs text-white/50 text-center">
-                      {isDelivery
-                        ? `Delivered by Uber · ${money(DELIVERY_MIN_CENTS)} minimum · ${DELIVERY_AREA_LABEL}`
-                        : "Pick it up at the window, no extra fees"}
-                    </p>
+                <div className="mt-4">
+                  <div
+                    role="radiogroup"
+                    aria-label="Dine-in, pickup or delivery"
+                    className={`grid ${modes.length === 3 ? "grid-cols-3" : "grid-cols-2"} gap-1 p-1 rounded-full bg-black/40 border border-white/10`}
+                  >
+                    {modes.map((m) => (
+                      <button
+                        key={m}
+                        type="button"
+                        role="radio"
+                        aria-checked={current === m}
+                        onClick={() => pickMode(m)}
+                        className={`py-2.5 rounded-full text-sm font-bold uppercase tracking-wider transition-all ${
+                          current === m ? "bg-brand-primary text-white" : "text-white/60 hover:text-white"
+                        }`}
+                      >
+                        {MODE_LABEL[m]}
+                      </button>
+                    ))}
                   </div>
-                )}
+                  <p className="mt-2 text-xs text-white/50 text-center">
+                    {isDelivery
+                      ? `Delivered by Uber · ${money(DELIVERY_MIN_CENTS)} minimum · ${DELIVERY_AREA_LABEL}`
+                      : isDineIn
+                        ? "At McSorley's: we'll bring it out to you and call your name"
+                        : "Pick it up at the window, no extra fees"}
+                  </p>
+                </div>
                 <div className="mt-4">
                   <TipPicker
                     subtotalCents={totalCents}
@@ -387,7 +389,7 @@ export default function OrderPage({ extras, menu }: { extras: MenuItem[]; menu: 
               instructions={instructions}
               tipCents={tipCents}
               taxCents={taxCents}
-              mode={isDelivery ? "DELIVERY" : "PICKUP"}
+              mode={current}
               feesCents={deliveryFee + serviceFee}
               onDeliveryQuote={setDeliveryQuote}
               onPlaced={setPlaced}

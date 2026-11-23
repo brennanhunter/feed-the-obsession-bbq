@@ -208,7 +208,7 @@ export async function POST(req: Request) {
     : body.channel === "DINE_IN"
       ? `DINE-IN · bring out to ${name}`
       : "TAKE-OUT";
-  const whenNote = isDelivery ? `Driver pickup: ${pickupLabel === "ASAP" ? `~${PREP_MINUTES} min` : pickupLabel}` : `Pickup: ${pickupLabel}`;
+  const whenNote = isDelivery ? `Driver pickup: ${pickupLabel === "ASAP" ? `~${PREP_MINUTES} min` : pickupLabel}` : body.channel === "DINE_IN" ? `Ready: ${pickupLabel}` : `Pickup: ${pickupLabel}`;
   const note = `${channelNote} · ${whenNote}${instructions ? ` · Note: ${instructions}` : ""}`.slice(0, 500);
 
   try {
