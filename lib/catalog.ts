@@ -170,6 +170,21 @@ function plateRank(title: string): number {
   return i < 0 ? PLATE_ORDER.length : i;
 }
 
+// Which meat an item or pick is, by name: "Rib Plate, No Side", "Ribs" and
+// "Pork Ribs by the Pound" are all ribs. Chicken salad is checked before chicken.
+const MEATS = ["chicken salad", "sliced pork", "pulled pork", "brisket", "rib", "chicken"];
+function meatOf(name: string): string | undefined {
+  const n = name.toLowerCase();
+  return MEATS.find((m) => new RegExp(`\\b${m}`).test(n));
+}
+
+// Most picks a choice can still take with the options it has left.
+function pickRoom(c: Choice): number {
+  if (!c.options.length) return 0;
+  if (!c.repeats) return c.options.length;
+  return c.maxEach > 0 ? c.options.length * c.maxEach : Infinity;
+}
+
 // Starred as best sellers on the owner's sheet.
 const BEST_SELLERS = ["brisket plate with 1 side", "rib plate with 1 side"];
 
@@ -304,8 +319,9 @@ export async function getMenu(): Promise<MenuItem[]> {
           maxEach: l.repeats ? (MAX_EACH[l.name.toLowerCase()] ?? 0) : 1,
           options: l.options,
         };
-      })
-      .filter((c) => c.options.length > 0);
+      });
+  // (Empty lists are dropped after the sold-out pass below, which needs to see
+  // a required list that has run out of options.)
 
   const items: MenuItem[] = [];
   for (const o of objects) {
@@ -366,6 +382,30 @@ export async function getMenu(): Promise<MenuItem[]> {
         ...(soldOut ? { soldOut: true } : {}),
       });
     }
+  }
+
+  // The owner marks a PLATE sold out in Square (e.g. "Rib Plate With 1 Side").
+  // That meat is then out everywhere online: its other plate, specials, by the
+  // pound, and as a pick in combos, sliders and sides. Square can't do this on
+  // its own (the combo picks are separate modifier options, and the API can't
+  // mark those sold out). Whole cuts are smoked to order, so they stay.
+  const outMeats = new Set(
+    items.filter((i) => i.soldOut && i.section === "Plates").map((i) => meatOf(i.title)).filter(Boolean)
+  );
+  for (const item of items) {
+    const meat = meatOf(item.title);
+    if (meat && outMeats.has(meat) && item.section !== "Whole Cuts") item.soldOut = true;
+    if (!item.choices) continue;
+    const choices = item.choices.map((c) => ({
+      ...c,
+      options: c.options.filter((o) => !outMeats.has(meatOf(o.name))),
+    }));
+    // A required pick that can't be filled any more (every slider meat out, or
+    // one meat left for a 3 Meat Plate that allows 2 of one) sells the item out.
+    if (choices.some((c) => pickRoom(c) < c.min)) item.soldOut = true;
+    const left = choices.filter((c) => c.options.length > 0);
+    if (left.length) item.choices = left;
+    else delete item.choices;
   }
 
   // Sections in menu order; plates in the printed-menu order (ties: with-side
