@@ -170,12 +170,37 @@ function plateRank(title: string): number {
   return i < 0 ? PLATE_ORDER.length : i;
 }
 
-// Which meat an item or pick is, by name: "Rib Plate, No Side", "Ribs" and
-// "Pork Ribs by the Pound" are all ribs. Chicken salad is checked before chicken.
-const MEATS = ["chicken salad", "sliced pork", "pulled pork", "brisket", "rib", "chicken"];
-function meatOf(name: string): string | undefined {
-  const n = name.toLowerCase();
-  return MEATS.find((m) => new RegExp(`\\b${m}`).test(n));
+// Ingredients = the crew's sold-out switches. The Square category "Ingredients"
+// holds one $0 item per ingredient (Ribs, Brisket, Beans…); marking one sold
+// out in Square shuts off every website item and pick that uses it. These meats
+// count even without that category, so a sold-out plate works on its own too.
+const INGREDIENT_CATEGORY = "ingredients";
+const BASE_INGREDIENTS = ["Brisket", "Ribs", "Pulled Pork", "Sliced Pork", "Chicken", "Chicken Salad"];
+
+// Lines names up: "Ribs", "Rib Plate, No Side" and "Pork Ribs by the Pound" all
+// hold " rib "; "(ingredient)"-style notes, apostrophes and plural s drop out.
+const norm = (s: string) =>
+  ` ${s
+    .toLowerCase()
+    .replace(/\(.*?\)/g, " ")
+    .replace(/['’]s?\b/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .split(" ")
+    .map((w) => w.replace(/s$/, ""))
+    .join(" ")} `;
+
+// The ingredients a name uses. `vocab` is normalized, longest first, so
+// "Chicken Salad Plate" is chicken salad and not also chicken.
+function ingredientsIn(name: string, vocab: string[]): string[] {
+  let n = norm(name);
+  const found: string[] = [];
+  for (const ing of vocab)
+    if (n.includes(ing)) {
+      found.push(ing);
+      n = n.split(ing).join(" ");
+    }
+  return found;
 }
 
 // Most picks a choice can still take with the options it has left.
@@ -262,6 +287,14 @@ export async function getMenu(): Promise<MenuItem[]> {
   const objects: any[] = [];
   for await (const o of page) objects.push(o);
 
+  const items = buildMenu(objects);
+  cache = { at: Date.now(), items };
+  return items;
+}
+
+// Square catalog objects → the online menu. No network, so it can be tested.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function buildMenu(objects: any[]): MenuItem[] {
   const catName: Record<string, string> = {};
   for (const o of objects)
     if (o.type === "CATEGORY") catName[o.id] = (o.categoryData?.name || "").trim();
@@ -384,21 +417,41 @@ export async function getMenu(): Promise<MenuItem[]> {
     }
   }
 
-  // The owner marks a PLATE sold out in Square (e.g. "Rib Plate With 1 Side").
-  // That meat is then out everywhere online: its other plate, specials, by the
-  // pound, and as a pick in combos, sliders and sides. Square can't do this on
-  // its own (the combo picks are separate modifier options, and the API can't
-  // mark those sold out). Whole cuts are smoked to order, so they stay.
-  const outMeats = new Set(
-    items.filter((i) => i.soldOut && i.section === "Plates").map((i) => meatOf(i.title)).filter(Boolean)
-  );
+  // An ingredient is out when its switch in Square's "Ingredients" category is
+  // marked sold out, or when a PLATE made from it is (e.g. "Rib Plate With 1
+  // Side"). It's then out everywhere online: other plates, specials, by the
+  // pound, and as a pick in combos, sliders and sides. Square can't link these
+  // itself (combo picks are separate modifier options, and the API can't mark
+  // those sold out). Whole cuts are smoked to order, so they stay.
+  const switches = objects
+    .filter((o) => o.type === "ITEM" && !o.isDeleted && !o.itemData?.isArchived)
+    .filter((o) => {
+      const d = o.itemData || {};
+      const id = d.categoryId || d.reportingCategory?.id || d.categories?.[0]?.id;
+      return ((id && catName[id]) || "").toLowerCase() === INGREDIENT_CATEGORY && (d.name || "").trim();
+    })
+    .map((o) => ({
+      name: (o.itemData.name as string).trim(),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      out: (o.itemData.variations || []).some((v: any) =>
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (v.itemVariationData?.locationOverrides || []).some((l: any) => l?.locationId === LOCATION_ID && l?.soldOut === true)
+      ),
+    }));
+  const vocab = [...new Set([...BASE_INGREDIENTS, ...switches.map((s) => s.name)].map(norm))]
+    .filter((v) => v.trim())
+    .sort((a, b) => b.length - a.length);
+  const out = new Set([
+    ...switches.filter((s) => s.out).map((s) => norm(s.name)),
+    ...items.filter((i) => i.soldOut && i.section === "Plates").flatMap((i) => ingredientsIn(i.title, vocab)),
+  ]);
+  const usesOut = (name: string) => ingredientsIn(name, vocab).some((g) => out.has(g));
   for (const item of items) {
-    const meat = meatOf(item.title);
-    if (meat && outMeats.has(meat) && item.section !== "Whole Cuts") item.soldOut = true;
+    if (item.section !== "Whole Cuts" && usesOut(item.title)) item.soldOut = true;
     if (!item.choices) continue;
     const choices = item.choices.map((c) => ({
       ...c,
-      options: c.options.filter((o) => !outMeats.has(meatOf(o.name))),
+      options: c.options.filter((o) => !usesOut(o.name)),
     }));
     // A required pick that can't be filled any more (every slider meat out, or
     // one meat left for a 3 Meat Plate that allows 2 of one) sells the item out.
@@ -419,7 +472,6 @@ export async function getMenu(): Promise<MenuItem[]> {
       a.title.localeCompare(b.title)
   );
 
-  cache = { at: Date.now(), items };
   return items;
 }
 
