@@ -18,7 +18,8 @@ const IN_STOCK = 100; // "plenty": the count an in-stock item is kept at
 const TOP_UP_BELOW = 30; // during the day, refill an in-stock item below this
 
 export type SyncResult = {
-  out: string[]; // ingredients the crew has switched off
+  out: string[]; // ingredients the crew has switched off (as named in Square)
+  handOut: string[]; // menu items marked sold out in Square, not because of a switch
   zeroed: string[];
   restocked: string[];
   tracked: string[]; // items whose stock tracking was turned on this run
@@ -54,9 +55,11 @@ function menuFromSwitches(objects: Obj[], everySwitchOut: boolean) {
 }
 
 export async function syncStock(
-  opts: { topUpBelow?: number; dryRun?: boolean; objects?: Obj[]; counts?: Map<string, number> } = {}
+  // morning: the daily run before opening. It refills the counter on items
+  // that are on sale and never brings back anything that's sold out.
+  opts: { morning?: boolean; dryRun?: boolean; objects?: Obj[]; counts?: Map<string, number> } = {}
 ): Promise<SyncResult> {
-  const topUpBelow = opts.topUpBelow ?? TOP_UP_BELOW;
+  const morning = opts.morning === true;
   const dryRun = opts.dryRun === true;
   // `objects` / `counts` let tests feed a catalog in (with dryRun).
   const objects: Obj[] = opts.objects ?? [];
@@ -64,15 +67,19 @@ export async function syncStock(
     for await (const o of await square.catalog.list({ types: "ITEM,CATEGORY,MODIFIER_LIST" })) objects.push(o);
 
   const sw = ingredientSwitches(objects);
-  const result: SyncResult = { out: [...sw.out].map((s) => s.trim()), zeroed: [], restocked: [], tracked: [], picksHidden: [], picksShown: [], skipped: [], dryRun };
+  const result: SyncResult = { out: sw.outNames, handOut: [], zeroed: [], restocked: [], tracked: [], picksHidden: [], picksShown: [], skipped: [], dryRun };
 
   // Items an ingredient can shut off, and which of them should be off now.
-  const shouldBeOut = new Set(menuFromSwitches(objects, false).filter((i) => i.soldOut).map((i) => i.id));
+  const menu = menuFromSwitches(objects, false);
+  const shouldBeOut = new Set(menu.filter((i) => i.soldOut).map((i) => i.id));
   const managed = menuFromSwitches(objects, true).filter((i) => i.soldOut);
 
   // Current state of those variations in Square.
   const variations = new Map<string, Obj>();
   for (const o of objects) for (const v of o.itemData?.variations || []) variations.set(v.id, v);
+  const soldOutInSquare = (id: string) =>
+    (variations.get(id)?.itemVariationData?.locationOverrides || []).some((l: Obj) => l?.locationId === LOCATION_ID && l?.soldOut === true);
+  result.handOut = menu.filter((i) => !shouldBeOut.has(i.id) && soldOutInSquare(i.id)).map((i) => i.title);
   const counts = opts.counts ?? new Map<string, number>();
   if (!opts.counts && managed.length) {
     const page = await square.inventory.batchGetCounts({ catalogObjectIds: managed.map((i) => i.id), locationIds: [LOCATION_ID] });
@@ -113,10 +120,17 @@ export async function syncStock(
       }
       continue;
     }
+    if (morning) {
+      // Never brings anything back: sold-out items wait for the crew.
+      if (handMarked) result.skipped.push(item.title);
+      else if (count == null || count < IN_STOCK) setCount.push({ id: item.id, qty: IN_STOCK });
+      continue;
+    }
+    // A crew tap just put the ingredient back: our zeros go back on sale.
     if (count == null || count <= 0) {
       setCount.push({ id: item.id, qty: IN_STOCK });
       result.restocked.push(item.title);
-    } else if (!handMarked && count < topUpBelow) setCount.push({ id: item.id, qty: IN_STOCK });
+    } else if (!handMarked && count < TOP_UP_BELOW) setCount.push({ id: item.id, qty: IN_STOCK });
   }
 
   // Combo / slider / side picks named for an ingredient: hidden online while
@@ -157,7 +171,7 @@ export async function syncStock(
 // One sync at a time per server; a change that lands mid-run gets one re-run.
 let running: Promise<SyncResult> | null = null;
 let again = false;
-export function syncStockSoon(opts?: { topUpBelow?: number }): Promise<SyncResult> {
+export function syncStockSoon(opts?: { morning?: boolean }): Promise<SyncResult> {
   if (running) {
     again = true;
     return running;
@@ -176,5 +190,3 @@ export function syncStockSoon(opts?: { topUpBelow?: number }): Promise<SyncResul
   })();
   return running;
 }
-
-export const STOCK_FULL = IN_STOCK;

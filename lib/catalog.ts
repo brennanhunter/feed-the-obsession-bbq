@@ -233,6 +233,7 @@ export function ingredientSwitches(objects: any[]) {
     ids: new Set(switches.map((s) => s.id)),
     vocab,
     out: new Set(switches.filter((s) => s.out).map((s) => norm(s.name))),
+    outNames: switches.filter((s) => s.out).map((s) => s.name.replace(/\s*\(.*?\)\s*/g, " ").trim()),
     of: (name: string) => ingredientsIn(name, vocab),
   };
 }
