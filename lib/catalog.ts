@@ -203,6 +203,40 @@ function ingredientsIn(name: string, vocab: string[]): string[] {
   return found;
 }
 
+// The "Ingredients" switch items in a Square catalog listing: their item ids,
+// the ingredient vocabulary (base meats + every switch, normalized, longest
+// first) and which ingredients the crew has marked sold out at the shop.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function ingredientSwitches(objects: any[]) {
+  const catName: Record<string, string> = {};
+  for (const o of objects) if (o.type === "CATEGORY") catName[o.id] = (o.categoryData?.name || "").trim();
+  const switches = objects
+    .filter((o) => o.type === "ITEM" && !o.isDeleted && !o.itemData?.isArchived)
+    .filter((o) => {
+      const d = o.itemData || {};
+      const id = d.categoryId || d.reportingCategory?.id || d.categories?.[0]?.id;
+      return ((id && catName[id]) || "").toLowerCase() === INGREDIENT_CATEGORY && (d.name || "").trim();
+    })
+    .map((o) => ({
+      id: o.id as string,
+      name: (o.itemData.name as string).trim(),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      out: (o.itemData.variations || []).some((v: any) =>
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (v.itemVariationData?.locationOverrides || []).some((l: any) => l?.locationId === LOCATION_ID && l?.soldOut === true)
+      ),
+    }));
+  const vocab = [...new Set([...BASE_INGREDIENTS, ...switches.map((s) => s.name)].map(norm))]
+    .filter((v) => v.trim())
+    .sort((a, b) => b.length - a.length);
+  return {
+    ids: new Set(switches.map((s) => s.id)),
+    vocab,
+    out: new Set(switches.filter((s) => s.out).map((s) => norm(s.name))),
+    of: (name: string) => ingredientsIn(name, vocab),
+  };
+}
+
 // Most picks a choice can still take with the options it has left.
 function pickRoom(c: Choice): number {
   if (!c.options.length) return 0;
@@ -423,26 +457,9 @@ export function buildMenu(objects: any[]): MenuItem[] {
   // pound, and as a pick in combos, sliders and sides. Square can't link these
   // itself (combo picks are separate modifier options, and the API can't mark
   // those sold out). Whole cuts are smoked to order, so they stay.
-  const switches = objects
-    .filter((o) => o.type === "ITEM" && !o.isDeleted && !o.itemData?.isArchived)
-    .filter((o) => {
-      const d = o.itemData || {};
-      const id = d.categoryId || d.reportingCategory?.id || d.categories?.[0]?.id;
-      return ((id && catName[id]) || "").toLowerCase() === INGREDIENT_CATEGORY && (d.name || "").trim();
-    })
-    .map((o) => ({
-      name: (o.itemData.name as string).trim(),
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      out: (o.itemData.variations || []).some((v: any) =>
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (v.itemVariationData?.locationOverrides || []).some((l: any) => l?.locationId === LOCATION_ID && l?.soldOut === true)
-      ),
-    }));
-  const vocab = [...new Set([...BASE_INGREDIENTS, ...switches.map((s) => s.name)].map(norm))]
-    .filter((v) => v.trim())
-    .sort((a, b) => b.length - a.length);
+  const { vocab, out: switchedOff } = ingredientSwitches(objects);
   const out = new Set([
-    ...switches.filter((s) => s.out).map((s) => norm(s.name)),
+    ...switchedOff,
     ...items.filter((i) => i.soldOut && i.section === "Plates").flatMap((i) => ingredientsIn(i.title, vocab)),
   ]);
   const usesOut = (name: string) => ingredientsIn(name, vocab).some((g) => out.has(g));
