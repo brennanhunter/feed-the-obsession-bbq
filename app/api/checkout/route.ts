@@ -5,7 +5,7 @@ import { isSpecialAvailable, specialLabel } from "@/lib/specials";
 import { sendEmail } from "@/lib/mailer";
 import { orderConfirmationEmail, type OrderEmailLine, type OrderEmailDelivery } from "@/lib/order-email";
 import { orderNotifyEmail } from "@/lib/order-notify";
-import { etDaysAhead, formatPickupLabel } from "@/lib/hours";
+import { etDaysAhead, formatPickupLabel, isOpenAt } from "@/lib/hours";
 import { business } from "@/lib/business";
 import { MAX_TIP_CENTS } from "@/lib/tips";
 import {
@@ -100,8 +100,13 @@ export async function POST(req: Request) {
     if (isNaN(ms) || ms < Date.now() - 60_000 || ms > Date.now() + 8 * 86_400_000) {
       return new Response("Please choose a valid pickup time", { status: 400 });
     }
+    if (!isOpenAt(d)) {
+      return new Response("We're closed at that time — please choose another pickup time", { status: 400 });
+    }
     scheduleType = "SCHEDULED";
     pickupAt = d.toISOString();
+  } else if (!isOpenAt(new Date())) {
+    return new Response("We're closed right now — please choose a pickup time when we're open", { status: 400 });
   }
   const pickupLabel = pickupAt ? formatPickupLabel(pickupAt) : "ASAP";
   const servedAt = pickupAt ? new Date(pickupAt) : new Date();

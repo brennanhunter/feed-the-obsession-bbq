@@ -64,9 +64,27 @@ export function getETDateParts(date: Date = new Date()) {
   return { weekday: p.weekday, year: +p.year, month: +p.month, day: +p.day };
 }
 
+const ymd = (y: number, m: number, d: number) =>
+  `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+
+/** Opening hours for a calendar day, or undefined if the shop is closed that day. */
+function hoursOn(weekday: string, y: number, m: number, d: number) {
+  if (business.closedDates.includes(ymd(y, m, d))) return undefined;
+  return business.hours.find((h) => h.days.includes(weekday));
+}
+
+/** True if the shop is open (by the posted hours and holiday closures) at `date`. */
+export function isOpenAt(date: Date): boolean {
+  const p = partsInTZ(date, { weekday: "long", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
+  const hrs = hoursOn(p.weekday, +p.year, +p.month, +p.day);
+  if (!hrs) return false;
+  const mins = (parseInt(p.hour, 10) % 24) * 60 + parseInt(p.minute, 10);
+  return mins >= toMins(hrs.opens) && mins < toMins(hrs.closes);
+}
+
 export function getOpenStatus(): { open: boolean; label: string } {
   const now = nowET();
-  const today = business.hours.find((h) => h.days.includes(now.weekday));
+  const today = hoursOn(now.weekday, now.year, now.month, now.day);
   if (!today) return { open: false, label: "Closed today" };
   const openM = toMins(today.opens);
   const closeM = toMins(today.closes);
@@ -93,7 +111,7 @@ export function etDaysAhead(date: Date): number {
  */
 export function getPickupOptions(leadDays = 0): { asap: boolean; slots: PickupOption[] } {
   const now = nowET();
-  const today = business.hours.find((h) => h.days.includes(now.weekday));
+  const today = hoursOn(now.weekday, now.year, now.month, now.day);
   const asap = leadDays > 0 ? false : today ? now.mins >= toMins(today.opens) && now.mins < toMins(today.closes) : false;
   const maxSlots = 64; // up to four days to choose from
 
@@ -103,7 +121,7 @@ export function getPickupOptions(leadDays = 0): { asap: boolean; slots: PickupOp
   for (let offset = leadDays; offset < leadDays + 4 && slots.length < maxSlots; offset++) {
     const dayDate = new Date(noonToday.getTime() + offset * 86400000);
     const p = partsInTZ(dayDate, { weekday: "long", year: "numeric", month: "2-digit", day: "2-digit" });
-    const hrs = business.hours.find((h) => h.days.includes(p.weekday));
+    const hrs = hoursOn(p.weekday, +p.year, +p.month, +p.day);
     if (!hrs) continue;
 
     const openM = toMins(hrs.opens);

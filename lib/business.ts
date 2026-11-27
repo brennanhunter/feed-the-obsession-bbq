@@ -46,6 +46,10 @@ export const business = {
     },
   ] as { days: string[]; opens: string; closes: string }[],
   hoursDisplay: "Daily 12–8 PM · Fri 12–9 PM",
+  // Whole days the shop is closed (holidays), as YYYY-MM-DD in Eastern time.
+  // The site shows "Closed today", offers no pickup times that day, and
+  // checkout refuses orders for it.
+  closedDates: ["2026-11-26"] as string[],
 
   maps: {
     // Turn-by-turn directions to the shop.
